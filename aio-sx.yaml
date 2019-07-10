@@ -1,0 +1,26 @@
+group: "aio-sx-vbx"
+home: "."
+hosts:
+  controller-0:
+    cpu: 8
+    memory: 32
+    storage:
+    - type: "ssd"
+      controller: "ide"
+      size: 520
+    - type: "ssd"
+      controller: "ide"
+      size: 520
+    - type: "ssd"
+      controller: "sata"
+      size: 520
+    network:
+    - type: "nat"
+      name: "nat0"
+      adapter: "e1000"
+    - type: "internal"
+      name: "intnet-data1"
+      adapter: "virtio"
+    - type: "internal"
+      name: "intnet-data2"
+      adapter: "virtio"

@@ -1,0 +1,109 @@
+{{- define "prepare-bootimage" }}
+  {{- $lab := . -}}
+prepare_bootimage() {
+    TMP_ORIG_ISO_DIR=$(mktemp -d)
+    TMP_PATCH_ISO_DIR=/tmp/iso-patch #$(mktemp -d)
+    fuseiso -p "${ISO_PATH}" ${TMP_ORIG_ISO_DIR}
+    rsync -ra ${TMP_ORIG_ISO_DIR}/ ${TMP_PATCH_ISO_DIR}
+    fusermount -u ${TMP_ORIG_ISO_DIR}
+    rmdir ${TMP_ORIG_ISO_DIR}
+    chmod -R +w ${TMP_PATCH_ISO_DIR}
+    OUT_ISO_PATH=${BASE_PATH}/bootimage.iso
+    pushd ${TMP_PATCH_ISO_DIR}
+    isolinux_boot_override
+    setup_user_access
+    setup_oam_interface
+    setup_known_hosts
+    prepare_ansible
+    mkisofs -R -D -A 'oe_iso_boot' -V 'oe_iso_boot' \
+            -quiet \
+            -b isolinux.bin \
+            -c boot.cat \
+            -no-emul-boot \
+            -boot-load-size 4 \
+            -boot-info-table \
+            -eltorito-alt-boot \
+            -e images/efiboot.img \
+            -no-emul-boot \
+            -o  ${OUT_ISO_PATH} \
+             ${TMP_PATCH_ISO_DIR}
+    popd
+    # rm -rf ${TMP_PATCH_ISO_DIR}
+}
+
+isolinux_boot_override() {
+    sed -i 's#ui vesamenu.c32#default 0#' isolinux.cfg
+}
+
+setup_user_access() {
+    sed -i 's#chage -d 0 sysadmin#echo "Li69nux*" | passwd --stdin sysadmin#' \
+        ks.cfg controller_ks.cfg
+    sed -i 's#passwd -l root#echo "Li69nux*" | passwd --stdin root#' \
+        ks.cfg controller_ks.cfg
+    cat <<OUTER_EOF >> ks.cfg
+%post --erroronfail
+cat <<EOF >>/etc/sudoers
+sysadmin ALL=(ALL) NOPASSWD: ALL
+EOF
+cat <<EOF >>/etc/ssh/sshd_config
+PermitRootLogin yes
+AllowAgentForwarding yes
+AllowTcpForwarding yes
+TCPKeepAlive yes
+PermitTunnel yes
+EOF
+%end
+OUTER_EOF
+}
+
+setup_oam_interface() {
+    cat <<OUTER_EOF >> ks.cfg
+%post --erroronfail
+cat <<EOF >/etc/sysconfig/network-scripts/ifcfg-enp0s3
+DEVICE=enp0s3
+IPADDR={{ $lab.Oam.Controller0 }}
+NETMASK={{ $lab.Oam.Network | NetCidrMask }}
+GATEWAY={{ $lab.Oam.Gateway }}
+ONBOOT=yes
+EOF
+%end
+OUTER_EOF
+}
+
+prepare_ansible() {
+    cat <<OUTER_EOF >> ks.cfg
+%post --erroronfail
+cat <<EOF >/home/sysadmin/localhost.yml
+# Mandatory
+system_mode: duplex
+
+# Optional
+external_oam_subnet: {{ $lab.Oam.Network }}
+external_oam_gateway_address: {{ $lab.Oam.Gateway }}
+external_oam_floating_address: {{ $lab.Oam.FloatAddr }}
+external_oam_node_0_address: {{ $lab.Oam.Controller0 }}
+external_oam_node_1_address: {{ $lab.Oam.Controller1 }}
+management_subnet: 192.168.204.0/24
+dns_servers:
+  - 8.8.4.4
+admin_password: Li69nux*
+ansible_become_pass: Li69nux*
+EOF
+%end
+OUTER_EOF
+}
+
+prepare_known_hosts() {
+    cat <<OUTER_EOF >> ks.cfg
+%post --erroronfail
+mkdir -p /root/.ssh
+cat <<EOF >/root/.ssh/authorized_keys
+$(cat ~/.ssh/id_rsa.pub)
+EOF
+chmod -R u=rwX /home/sysadmin/.ssh
+cp -rfp /root/.ss /home/sysadmin/
+chown -R sysadmin:users /home/sysadmin/.ssh
+%end
+OUTER_EOF
+}
+{{- end }}

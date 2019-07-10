@@ -1,0 +1,222 @@
+{{- define "vbox-setup" -}}
+  {{- $lab := . -}}
+#!/usr/bin/env bash
+ROOT_PATH=
+BASE_PATH=
+ISO_PATH=
+
+cleanup() {
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+    vboxmanage unregistervm "{{ $vmName }}" --delete >/dev/null 2>&1
+      {{- range $i, $disk := $vm.Disks }}
+    vboxmanage closemedium "{{ $disk.Medium }}" --delete >/dev/null 2>&1
+      {{- end }}
+    {{- end }}
+    {{- range $i, $net := $lab.Networks }}
+      {{- if eq $net.Mode "hostonly" }}
+    vboxmanage hostonlyif remove "{{ $net.Name }}" >/dev/null 2>&1
+      {{- end }}
+      {{- if eq $net.Mode "natnetwork" }}
+    vboxmanage natnetwork remove --netname "{{ $net.Name }}" >/dev/null 2>&1
+      {{- end }}
+    {{- end }}
+    # rm -rf "{{ $lab.BasePath }}"
+    vboxmanage closemedium "{{ $lab.InstallIso }}" >/dev/null 2>&1
+}
+
+run() {
+    "$@"
+    if [[ $? -ne 0 ]]; then
+        echo "ERR: '$@' failed. Return code: $?"
+        cleanup
+        exit 1
+    fi
+}
+
+setup_vbox() {
+    # setup networks
+    #
+    {{- range $i, $net := $lab.Networks }}
+      {{- if eq $net.Mode "hostonly" }}
+    vboxmanage hostonlyif remove "{{ $net.Name }}" >/dev/null 2>&1
+    run vboxmanage hostonlyif create "{{ $net.Name }}"
+      {{- end }}
+      {{- if eq $net.Mode "natnetwork" }}
+    for i in $(seq 3); do
+        vboxmanage natnetwork list "{{ $net.Name }}" \
+                   | grep '0 networks found' && break
+        vboxmanage natnetwork remove --netname "{{ $net.Name }}"
+        sleep 2
+    done
+    run vboxmanage natnetwork add \
+               --netname "{{ $net.Name }}" \
+               --network "{{ $net.Address }}" \
+        {{- range $_, $map := $net.LoopbackMap }}
+               --loopback-4 "{{ $map }}" \
+        {{- end }}
+        {{- range $i, $rule := $net.PortForward }}
+               --port-forward-4 "{{ printf "pf-%d:%s" $i $rule }}" \
+        {{- end }}
+               --enable \
+               --dhcp off \
+               --ipv6 off
+      {{- end }}
+    {{- end }}
+    {{- range .Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+    # setup {{ $vm.Name }}
+    #
+    vboxmanage unregistervm "{{ $vmName }}" --delete >/dev/null 2>&1
+      {{- range $i, $disk := .Disks }}
+    if [[ -f "{{ $disk.Medium }}" ]]; then
+        vboxmanage closemedium "{{ $disk.Medium }}" --delete
+        rm -f "{{ $disk.Medium }}" || true
+    fi
+    run vboxmanage createmedium disk \
+              --filename "{{ $disk.Medium }}" \
+              --size "{{ mul $disk.Size 1024 }}" \
+              --format vdi
+      {{- end }}
+    run vboxmanage createvm \
+              --register \
+              --name "{{ $vmName }}" \
+              --ostype Other_64 \
+              --basefolder "." \
+              --groups "/{{ $.Group }}"
+    run vboxmanage modifyvm "{{ $vmName }}" \
+              --cpus "{{ $vm.Cpus }}" \
+              --memory "{{ mul $vm.Memory 1024 }}" \
+              --vram 12 \
+      {{- if $vm.BootOrder }}
+        {{- range $i, $source := $vm.BootOrder }}
+              --boot{{ add1 $i }} {{ $source }} \
+        {{- end }}
+      {{- end }}
+              --uart1 0x3F8 4 \
+              --uartmode1 server "${BASE_PATH}/{{ $vmName }}-serial" \
+              --acpi on \
+              --ioapic on
+      {{- range $i, $ctrl := $vm.StorageControllers }}
+    run vboxmanage storagectl "{{ $vmName }}" \
+              --name "{{ $ctrl.Name }}" \
+              --add "{{ $ctrl.Type }}" \
+              --controller "{{ $ctrl.Chipset }}" \
+        {{- if ne $ctrl.Type "ide" }}
+              --portcount "{{ $ctrl.PortCount }}" \
+        {{- end }}
+              --hostiocache {{ $ctrl.HostIOCache | ternary "on" "off" }} \
+              --bootable {{ $ctrl.Bootable | ternary "on" "off" }}
+      {{- end }}
+      {{- range $i, $attach := $vm.StorageAttachments }}
+    run vboxmanage storageattach "{{ $vmName }}" \
+              --storagectl "{{ $attach.Controller}}" \
+              --port "{{ $attach.Port }}" \
+              --device "{{ $attach.Device }}" \
+              --type "{{ $attach.Type }}" \
+        {{- if $attach.NonRotational }}
+              --nonrotational on \
+        {{- end }}
+        {{- if $attach.Discard }}
+              --discard on \
+        {{- end }}
+              --medium "{{ $attach.Medium }}"
+      {{- end }}
+      {{- range $i, $nic := $vm.Nics }}
+        {{- $n := add1 $i }}
+        {{- $adapterMap := dict "bridged" "--bridgeadapter" "hostonly" "--hostonlyadapter" "intnet" "--intnet" "natnetwork" "--nat-network" }}
+    run vboxmanage modifyvm "{{ $vmName }}" \
+               --nic{{ $n }} "{{ $nic.Mode }}" \
+               {{ index $adapterMap $nic.Mode }}{{ $n }} "{{ $nic.Network }}" \
+         {{- if $nic.BootPrio }}
+               --nicbootprio{{ $n }} "{{ $nic.BootPrio }}" \
+         {{- end }}
+         {{- if $nic.Promisc }}
+               --nicpromisc{{ $n }} "{{ $nic.Promisc }}" \
+         {{- end }}
+               --nictype{{ $n }} "{{ $nic.Type }}"
+      {{- end }}
+    {{- end }}
+}
+
+{{ template "prepare-bootimage" $lab }}
+
+setup_ssh() {
+    cat <<EOF >ssh.config
+Host controller-0
+  User sysadmin
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  GlobalKnownHostsFile /dev/null
+  Hostname 127.0.1.3
+  Port 2222
+
+Host controller-0-*
+  User sysadmin
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  GlobalKnownHostsFile /dev/null
+  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@$127.0.1.3 -p 2222 nc $(echo %h | sed -s "s/controller-0-//") 22
+
+Host controller-1
+  User sysadmin
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  GlobalKnownHostsFile /dev/null
+  Hostname 127.0.1.4
+  Port 2222
+
+Host controller-1-*
+  User sysadmin
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  GlobalKnownHostsFile /dev/null
+  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@$127.0.1.4 -p 2222 nc $(echo %h | sed -s "s/controller-1-//") 22
+EOF
+}
+
+check_natnet_setuid() {
+    if [[ ! -u /usr/lib/virtualbox/VBoxNetNAT ]]; then
+        echo <<EOF
+WARNING! VBoxNetNAT is not setuid and it may fail to start. In case
+WARNING! "ps fax | grep VBoxNetNAT" shows is as <defunct> you can
+WARNING! fix it by running:
+WARNING!
+WARNING!     sudo /usr/lib/virtualbox/ -type f -executable -exec chmod u+s {} \;
+WARNING!
+EOF
+    fi
+}
+
+main() {
+    if [[ -z "${ROOT_PATH}" ]]; then
+        mkdir -p "{{ $lab.BasePath }}"
+            if [[ $? -ne 0 ]]; then
+                echo "ERR: '$@' failed. Return code: $?"
+                exit 1
+            fi
+        cp $BASH_SOURCE "{{ $lab.BasePath }}"/vbox-setup.sh
+        sed -i "s#^ROOT_PATH=#ROOT_PATH=$(pwd)#" \
+            "{{ $lab.BasePath }}"/vbox-setup.sh
+        sed -i "s#^BASE_PATH=#BASE_PATH=$(realpath {{ $lab.BasePath }})#" \
+            "{{ $lab.BasePath }}"/vbox-setup.sh
+        sed -i "s#^ISO_PATH=#ISO_PATH=$(realpath {{ $lab.InstallIso }})#" \
+            "{{ $lab.BasePath }}"/vbox-setup.sh
+        cd "{{ $lab.BasePath }}"
+        chmod a+x ./vbox-setup.sh
+        exec ./vbox-setup.sh
+    else
+        set -x
+        pushd ${ROOT_PATH}
+        #prepare_bootimage
+        popd
+        #setup_vbox
+        setup_ssh
+        check_natnet_setuid
+    fi
+}
+
+main
+{{- end }}

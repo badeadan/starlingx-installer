@@ -1,0 +1,34 @@
+{{- define "lab-storage-config" }}
+{{- $lab := . }}
+group: "{{ $lab.Name }}"
+basepath: "./{{ $lab.Name }}"
+installiso: "{{ $lab.Iso }}"
+oam:
+  network: "{{ $lab.Oam.Network }}"
+  gateway: "{{ $lab.Oam.Gateway }}"
+  floataddr: "{{ $lab.Oam.FloatAddr }}"
+  controller0: "{{ $lab.Oam.Controller0 }}"
+  controller1: "{{ $lab.Oam.Controller1 }}"
+networks:
+  - mode:    "natnetwork"
+    name:    "{{ $lab.NatNet }}"
+    address:    "{{ $lab.Oam.Network }}"
+    loopbackmap:
+      - "127.0.0.1=241"
+      - "127.0.1.2=242"
+      - "127.0.1.3=243"
+      - "127.0.1.4=244"
+    portforward:
+      - "tcp:[127.0.1.2]:2222:[{{ $lab.Oam.FloatAddr }}]:22"
+      - "tcp:[127.0.1.3]:2222:[{{ $lab.Oam.Controller0 }}]:22"
+      - "tcp:[127.0.1.4]:2222:[{{ $lab.Oam.Controller1 }}]:22"
+vms:
+  {{- dict "Id" 0 "Lab" $lab | include "controller" | nindent 2 }}
+  {{- dict "Id" 1 "Lab" $lab | include "controller" | nindent 2 }}
+  {{- range $i := until (int $lab.ComputeCount) }}
+    {{- dict "Id" $i "Lab" $lab | include "compute" | nindent 2 }}
+  {{- end }}
+  {{- range $i := until (int $lab.StorageCount) }}
+    {{- dict "Id" $i "Lab" $lab | include "storage" | nindent 2 }}
+  {{- end }}
+{{- end }}
