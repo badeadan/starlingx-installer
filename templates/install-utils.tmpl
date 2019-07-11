@@ -34,7 +34,7 @@ wait_platform_available() {
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
     while true; do
         [[ "$(date '+%s')" -lt "${deadline}" ]] || die
-        timeout 10 ssh -F ./ssh.config ${host} bash <<EOF && echo OK
+        timeout 10 ssh -F ./ssh.config ${host} bash <<EOF && break
 [[ -f /etc/platform/openrc ]] || exit 1
 EOF
         sleep 20
@@ -57,6 +57,21 @@ system host-list controller-0
 EOF
               )
         [[ "${status}" == "$a/$b/$c" ]] && break
+        sleep 10
+    done
+}
+
+wait_systemd_multi_user_target() {
+    local host=$1
+    local timeout_min=$2
+    local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    while true; do
+        [[ "$(date '+%s')" -lt "${deadline}" ]] || die
+        status=$(ssh -F ./ssh.config controller-0 bash <<'EOF' | awk "\$1==\"multi-user.target\"{print \$2 \"/\" \$3 \"/\" \$4}"
+systemctl list-units --type target 
+EOF
+              )
+        [[ "${status}" == "loaded/active/active" ]] && break
         sleep 10
     done
 }

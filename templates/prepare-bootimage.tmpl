@@ -15,11 +15,16 @@ prepare_bootimage() {
     rmdir ${TMP_ORIG_ISO_DIR}
     chmod -R +w ${TMP_PATCH_ISO_DIR}
     pushd ${TMP_PATCH_ISO_DIR}
-    isolinux_boot_override
-    setup_user_access
-    setup_oam_interface
-    setup_known_hosts
-    prepare_ansible
+    isolinux_boot_override || die
+    setup_user_access ks.cfg || die
+    setup_user_access smallsystem_ks.cfg || die
+    setup_oam_interface ks.cfg || die
+    setup_oam_interface smallsystem_ks.cfg || die
+    setup_known_hosts ks.cfg || die
+    setup_known_hosts smallsystem_ks.cfg || die
+    setup_known_hosts controller_ks.cfg || die
+    prepare_ansible ks.cfg || die
+    prepare_ansible smallsystem_ks.cfg || die
     mkisofs -R -D -A 'oe_iso_boot' -V 'oe_iso_boot' \
             -quiet \
             -b isolinux.bin \
@@ -37,15 +42,20 @@ prepare_bootimage() {
 }
 
 isolinux_boot_override() {
+{{- if eq $lab.SystemMode "simplex" }}
+    sed -i 's#ui vesamenu.c32#default 2#' isolinux.cfg
+{{- else }}
     sed -i 's#ui vesamenu.c32#default 0#' isolinux.cfg
+{{- end }}
 }
 
 setup_user_access() {
+    local ks_file=$1
     sed -i 's#chage -d 0 sysadmin#echo "Li69nux*" | passwd --stdin sysadmin#' \
-        ks.cfg controller_ks.cfg
+        ${ks_file}
     sed -i 's#passwd -l root#echo "Li69nux*" | passwd --stdin root#' \
-        ks.cfg controller_ks.cfg
-    cat <<OUTER_EOF >> ks.cfg
+        ${ks_file}
+    cat <<OUTER_EOF >>${ks_file}
 %post --erroronfail
 cat <<EOF >>/etc/sudoers
 sysadmin ALL=(ALL) NOPASSWD: ALL
@@ -62,11 +72,12 @@ OUTER_EOF
 }
 
 setup_oam_interface() {
-    cat <<OUTER_EOF >> ks.cfg
+    local ks_file=$1
+    cat <<OUTER_EOF >>${ks_file}
 %post --erroronfail
 cat <<EOF >/etc/sysconfig/network-scripts/ifcfg-enp0s3
 DEVICE=enp0s3
-IPADDR={{ $lab.Oam.Controller0 }}
+IPADDR={{ default $lab.Oam.FloatAddr $lab.Oam.Controller0 }}
 NETMASK={{ $lab.Oam.Network | NetCidrMask }}
 GATEWAY={{ $lab.Oam.Gateway }}
 ONBOOT=yes
@@ -75,31 +86,9 @@ EOF
 OUTER_EOF
 }
 
-prepare_ansible() {
-    cat <<OUTER_EOF >> ks.cfg
-%post --erroronfail
-cat <<EOF >/home/sysadmin/localhost.yml
-# Mandatory
-system_mode: duplex
-
-# Optional
-external_oam_subnet: {{ $lab.Oam.Network }}
-external_oam_gateway_address: {{ $lab.Oam.Gateway }}
-external_oam_floating_address: {{ $lab.Oam.FloatAddr }}
-external_oam_node_0_address: {{ $lab.Oam.Controller0 }}
-external_oam_node_1_address: {{ $lab.Oam.Controller1 }}
-management_subnet: 192.168.204.0/24
-dns_servers:
-  - 8.8.4.4
-admin_password: Li69nux*
-ansible_become_pass: Li69nux*
-EOF
-%end
-OUTER_EOF
-}
-
 setup_known_hosts() {
-    cat <<OUTER_EOF >> ks.cfg
+    local ks_file=$1
+    cat <<OUTER_EOF >>${ks_file}
 %post --erroronfail
 mkdir -p /root/.ssh
 cat <<EOF >/root/.ssh/authorized_keys
@@ -108,6 +97,34 @@ EOF
 chmod -R u=rwX /home/sysadmin/.ssh
 cp -rfp /root/.ssh /home/sysadmin/
 chown -R sysadmin:users /home/sysadmin/.ssh
+%end
+OUTER_EOF
+}
+
+prepare_ansible() {
+    local ks_file=$1
+    cat <<OUTER_EOF >>${ks_file}
+%post --erroronfail
+cat <<EOF >/home/sysadmin/localhost.yml
+# Mandatory
+system_mode: {{ eq $lab.SystemMode "simplex" | ternary "simplex" "duplex" }}
+
+# Optional
+external_oam_subnet: {{ $lab.Oam.Network }}
+external_oam_gateway_address: {{ $lab.Oam.Gateway }}
+external_oam_floating_address: {{ $lab.Oam.FloatAddr }}
+{{- if $lab.Oam.Controller0 }}
+external_oam_node_0_address: {{ $lab.Oam.Controller0 }}
+{{- end }}
+{{- if $lab.Oam.Controller1 }}
+external_oam_node_1_address: {{ $lab.Oam.Controller1 }}
+{{- end }}
+management_subnet: 192.168.204.0/24
+dns_servers:
+  - 8.8.4.4
+admin_password: Li69nux*
+ansible_become_pass: Li69nux*
+EOF
 %end
 OUTER_EOF
 }

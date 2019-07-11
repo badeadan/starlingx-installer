@@ -1,0 +1,60 @@
+{{- define "aiosx" }}
+  {{- $lab := .Lab }}
+  {{- $id := .Id }}
+  {{- $name := printf "controller-%d" .Id }}
+- name:   "controller-{{ $id }}"
+  cpus:   {{ $lab.Cpus }}
+  memory: {{ $lab.Memory }}
+  bootorder:
+    - dvd
+    - disk
+  disks:
+    - medium: "{{ $name }}-0.vdi"
+      size:   {{ $lab.DiskSize }}
+    - medium: "{{ $name }}-1.vdi"
+      size:   {{ $lab.DiskSize }}
+  storagecontrollers:
+    - name:        "IDE1"
+      type:        "ide"
+      chipset:     "PIIX4"
+      hostiocache: true
+      bootable:    true
+    - name:        "SATA1"
+      type:        "sata"
+      chipset:     "IntelAHCI"
+      portcount:   4
+      hostiocache: true
+      bootable:    true
+  storageattachments:
+    - controller:    "IDE1"
+      port:          0
+      device:        0
+      type:          "dvddrive"
+      medium:        "./bootimage-auto.iso"
+    - controller:    "SATA1"
+      port:          0
+      device:        0
+      type:          "hdd"
+      medium:        "{{ $name }}-0.vdi"
+      nonrotational: true
+      discard:       true
+    - controller:    "SATA1"
+      port:          1
+      device:        0
+      type:          "hdd"
+      medium:        "{{ $name }}-1.vdi"
+      nonrotational: true
+      discard:       true
+  nics:
+    - mode:     "natnetwork"
+      network:  "{{ $lab.NatNet }}"
+      type:     "82540em"
+    - mode:     "intnet"
+      network:  "{{ $lab.IntNetPrefix }}-data1"
+      type:     "virtio"
+      promisc:  "allow-all"
+    - mode:     "intnet"
+      network:  "{{ $lab.IntNetPrefix }}-data2"
+      type:     "virtio"
+      promisc:  "allow-all"
+{{- end }}

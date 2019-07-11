@@ -1,0 +1,21 @@
+{{- define "lab-aiosx-config" }}
+{{- $lab := . }}
+group: "{{ $lab.Name }}"
+basepath: "."
+installiso: "bootimage-auto.iso"
+oam:
+  network: "{{ $lab.Oam.Network }}"
+  gateway: "{{ $lab.Oam.Gateway }}"
+  floataddr: "{{ $lab.Oam.FloatAddr }}"
+networks:
+  - mode:    "natnetwork"
+    name:    "{{ $lab.NatNet }}"
+    address:    "{{ $lab.Oam.Network }}"
+    loopbackmap:
+      - "127.0.0.1=241"
+      - "{{ $lab.LoopBackPrefix }}.3=243"
+    portforward:
+      - "tcp:[{{ $lab.LoopBackPrefix }}.3]:2222:[{{ $lab.Oam.FloatAddr }}]:22"
+vms:
+  {{- dict "Id" 0 "Lab" $lab | include "aiosx" | nindent 2 }}
+{{- end }}

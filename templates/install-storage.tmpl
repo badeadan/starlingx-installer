@@ -7,40 +7,7 @@ REBOOT_TIMEOUT=${REBOOT_TIMEOUT:-10}
 PLATFORM_TIMEOUT=${PLATFORM_TIMEOUT:-15}
 
 {{ template "install-utils" }}
-
-setup_ssh() {
-    cat <<EOF >ssh.config
-Host controller-0
-  User sysadmin
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
-  GlobalKnownHostsFile /dev/null
-  Hostname 127.0.1.3
-  Port 2222
-
-Host controller-0-*
-  User sysadmin
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
-  GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@$127.0.1.3 -p 2222 nc $(echo %h | sed -s "s/controller-0-//") 22
-
-Host controller-1
-  User sysadmin
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
-  GlobalKnownHostsFile /dev/null
-  Hostname 127.0.1.4
-  Port 2222
-
-Host controller-1-*
-  User sysadmin
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
-  GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@$127.0.1.4 -p 2222 nc $(echo %h | sed -s "s/controller-1-//") 22
-EOF
-}
+{{ template "install-ssh" }}
 
 set -x
 
@@ -52,11 +19,14 @@ setup_ssh
 #
 vboxmanage startvm {{ printf "%s-controller-0" $lab.Name }} --type headless || die
 wait_ssh_up controller-0 ${INSTALL_TIMEOUT}
+wait_systemd_multi_user_target controller-0 ${REBOOT_TIMEOUT}
 
-# run ansible playbook
-#
+sleep 120
+
+echo "# run ansible playbook"
 ssh -F ./ssh.config controller-0 \
-    ansible-playbook /usr/share/ansible/stx-ansible/playbooks/bootstrap/bootstrap.yml || die
+    ansible-playbook /usr/share/ansible/stx-ansible/playbooks/bootstrap/bootstrap.yml \
+    -e "override_files_dir=/home/sysadmin" || die
 
 # platform provisioning
 #

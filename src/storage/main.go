@@ -7,16 +7,18 @@ import (
 	"fmt"
 	"github.com/Masterminds/sprig"
 	"gopkg.in/yaml.v2"
+	"lab"
 	"log"
 	"net"
 	"os"
 	"text/template"
-	"lab"
 )
 
 type StorageLab struct {
 	Name               string
+	SystemMode         string
 	NatNet             string
+	LoopBackPrefix     string
 	IntNetPrefix       string
 	Oam                lab.OamInfo
 	ControllerCpus     uint
@@ -50,9 +52,10 @@ func (tw *TarWriter) WriteFileBytes(name string, mode int64, buffer *bytes.Buffe
 }
 
 func main() {
-	sl := StorageLab{}
+	sl := StorageLab{SystemMode: "standard"}
 	flag.StringVar(&sl.Name, "name", "storage", "group name")
-	flag.StringVar(&sl.NatNet, "nat-net", "nat0", "nat network name")
+	flag.StringVar(&sl.NatNet, "nat-net", "nat1", "nat network name")
+	flag.StringVar(&sl.LoopBackPrefix, "loopback-prefix", "127.0.1", "nat loopback prefix")
 	flag.StringVar(&sl.Oam.Network, "oam-network", "10.10.10.0/24", "oam network address")
 	flag.StringVar(&sl.Oam.Gateway, "oam-gateway", "10.10.10.1", "oam gateway")
 	flag.StringVar(&sl.Oam.FloatAddr, "oam-float", "10.10.10.2", "oam floating ip")

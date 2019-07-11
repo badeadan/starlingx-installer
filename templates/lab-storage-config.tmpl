@@ -15,13 +15,13 @@ networks:
     address:    "{{ $lab.Oam.Network }}"
     loopbackmap:
       - "127.0.0.1=241"
-      - "127.0.1.2=242"
-      - "127.0.1.3=243"
-      - "127.0.1.4=244"
+      - "{{ $lab.LoopBackPrefix }}.2=242"
+      - "{{ $lab.LoopBackPrefix }}.3=243"
+      - "{{ $lab.LoopBackPrefix }}.4=244"
     portforward:
-      - "tcp:[127.0.1.2]:2222:[{{ $lab.Oam.FloatAddr }}]:22"
-      - "tcp:[127.0.1.3]:2222:[{{ $lab.Oam.Controller0 }}]:22"
-      - "tcp:[127.0.1.4]:2222:[{{ $lab.Oam.Controller1 }}]:22"
+      - "tcp:[{{ $lab.LoopBackPrefix }}.2]:2222:[{{ $lab.Oam.FloatAddr }}]:22"
+      - "tcp:[{{ $lab.LoopBackPrefix }}.3]:2222:[{{ $lab.Oam.Controller0 }}]:22"
+      - "tcp:[{{ $lab.LoopBackPrefix }}.4]:2222:[{{ $lab.Oam.Controller1 }}]:22"
 vms:
   {{- dict "Id" 0 "Lab" $lab | include "controller" | nindent 2 }}
   {{- dict "Id" 1 "Lab" $lab | include "controller" | nindent 2 }}
