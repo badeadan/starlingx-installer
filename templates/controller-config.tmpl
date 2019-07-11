@@ -14,9 +14,9 @@
     - disk
   {{- end }}
   disks:
-    - medium: "./{{ $name }}-0.vdi"
+    - medium: "{{ $name }}-0.vdi"
       size:   {{ $lab.ControllerDiskSize }}
-    - medium: "./{{ $name }}-1.vdi"
+    - medium: "{{ $name }}-1.vdi"
       size:   {{ $lab.ControllerDiskSize }}
   storagecontrollers:
   {{- if eq $id 0 }}
@@ -38,20 +38,20 @@
       port:          0
       device:        0
       type:          "dvddrive"
-      medium:        "./bootimage.iso"
+      medium:        "./bootimage-auto.iso"
    {{- end }}
     - controller:    "SATA1"
       port:          0
       device:        0
       type:          "hdd"
-      medium:        "./{{ $name }}-0.vdi"
+      medium:        "{{ $name }}-0.vdi"
       nonrotational: true
       discard:       true
     - controller:    "SATA1"
       port:          1
       device:        0
       type:          "hdd"
-      medium:        "./{{ $name }}-1.vdi"
+      medium:        "{{ $name }}-1.vdi"
       nonrotational: true
       discard:       true
   nics:

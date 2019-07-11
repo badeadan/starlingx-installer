@@ -9,9 +9,9 @@
     - net
     - disk
   disks:
-    - medium: "./{{ $name }}-0.vdi"
+    - medium: "{{ $name }}-0.vdi"
       size:   {{ $lab.ComputeDiskSize }}
-    - medium: "./{{ $name }}-1.vdi"
+    - medium: "{{ $name }}-1.vdi"
       size:   {{ $lab.ComputeDiskSize }}
   storagecontrollers:
     - name:        "SATA1"
@@ -25,7 +25,7 @@
       port:          0
       device:        0
       type:          "hdd"
-      medium:        "./{{ $name }}-0.vdi"
+      medium:        "{{ $name }}-0.vdi"
       nonrotational: true
       discard:       true
   nics:

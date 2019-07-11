@@ -1,8 +1,8 @@
 {{- define "lab-storage-config" }}
 {{- $lab := . }}
 group: "{{ $lab.Name }}"
-basepath: "./{{ $lab.Name }}"
-installiso: "{{ $lab.Iso }}"
+basepath: "."
+installiso: "bootimage-auto.iso"
 oam:
   network: "{{ $lab.Oam.Network }}"
   gateway: "{{ $lab.Oam.Gateway }}"

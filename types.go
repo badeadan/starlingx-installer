@@ -63,8 +63,6 @@ type Lab struct {
 	Type              string
 	Group             string
 	BasePath          string
-	InstallIso        string
-	Oam               OamInfo
 	Vms               []Vm
 	Networks          []Network
 }

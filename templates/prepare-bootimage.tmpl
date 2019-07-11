@@ -1,14 +1,19 @@
 {{- define "prepare-bootimage" }}
   {{- $lab := . -}}
 prepare_bootimage() {
+    local iso=$1
+    if [[ ! -f "${iso}" ]]; then
+        echo "ERROR: missing iso ${iso}" >&2
+        exit 1
+    fi
     TMP_ORIG_ISO_DIR=$(mktemp -d)
-    TMP_PATCH_ISO_DIR=/tmp/iso-patch #$(mktemp -d)
-    fuseiso -p "${ISO_PATH}" ${TMP_ORIG_ISO_DIR}
+    TMP_PATCH_ISO_DIR=$(mktemp -d)
+    fuseiso -p "${iso}" ${TMP_ORIG_ISO_DIR}
     rsync -ra ${TMP_ORIG_ISO_DIR}/ ${TMP_PATCH_ISO_DIR}
     fusermount -u ${TMP_ORIG_ISO_DIR}
+    OUT_ISO_PATH=$(realpath ./bootimage-auto.iso)
     rmdir ${TMP_ORIG_ISO_DIR}
     chmod -R +w ${TMP_PATCH_ISO_DIR}
-    OUT_ISO_PATH=${BASE_PATH}/bootimage.iso
     pushd ${TMP_PATCH_ISO_DIR}
     isolinux_boot_override
     setup_user_access
@@ -25,10 +30,10 @@ prepare_bootimage() {
             -eltorito-alt-boot \
             -e images/efiboot.img \
             -no-emul-boot \
-            -o  ${OUT_ISO_PATH} \
+            -o ${OUT_ISO_PATH} \
              ${TMP_PATCH_ISO_DIR}
     popd
-    # rm -rf ${TMP_PATCH_ISO_DIR}
+    rm -rf ${TMP_PATCH_ISO_DIR}
 }
 
 isolinux_boot_override() {
@@ -93,7 +98,7 @@ EOF
 OUTER_EOF
 }
 
-prepare_known_hosts() {
+setup_known_hosts() {
     cat <<OUTER_EOF >> ks.cfg
 %post --erroronfail
 mkdir -p /root/.ssh
@@ -101,7 +106,7 @@ cat <<EOF >/root/.ssh/authorized_keys
 $(cat ~/.ssh/id_rsa.pub)
 EOF
 chmod -R u=rwX /home/sysadmin/.ssh
-cp -rfp /root/.ss /home/sysadmin/
+cp -rfp /root/.ssh /home/sysadmin/
 chown -R sysadmin:users /home/sysadmin/.ssh
 %end
 OUTER_EOF

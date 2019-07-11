@@ -10,7 +10,7 @@
     - disk
   disks:
   {{- range $i := $lab.StorageDiskCount | add1 | int | until }}
-    - medium: "./{{ $name }}-{{ $i }}.vdi"
+    - medium: "{{ $name }}-{{ $i }}.vdi"
       size:   {{ $lab.StorageDiskSize }}
   {{- end }}
   storagecontrollers:
@@ -26,7 +26,7 @@
       port:          {{ $i }}
       device:        0
       type:          "hdd"
-      medium:        "./{{ $name }}-{{ $i }}.vdi"
+      medium:        "{{ $name }}-{{ $i }}.vdi"
       nonrotational: true
       discard:       true
   {{- end }}

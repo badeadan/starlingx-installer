@@ -1,9 +1,9 @@
 {{- define "vbox-setup" -}}
   {{- $lab := . -}}
 #!/usr/bin/env bash
-ROOT_PATH=
-BASE_PATH=
 ISO_PATH=
+
+source ./prepare-bootimage.sh
 
 cleanup() {
     {{- range $lab.Vms }}
@@ -23,7 +23,7 @@ cleanup() {
       {{- end }}
     {{- end }}
     # rm -rf "{{ $lab.BasePath }}"
-    vboxmanage closemedium "{{ $lab.InstallIso }}" >/dev/null 2>&1
+    vboxmanage closemedium ${ISO_PATH} >/dev/null 2>&1
 }
 
 run() {
@@ -84,7 +84,7 @@ setup_vbox() {
               --register \
               --name "{{ $vmName }}" \
               --ostype Other_64 \
-              --basefolder "." \
+              --basefolder "{{ $lab.BasePath }}" \
               --groups "/{{ $.Group }}"
     run vboxmanage modifyvm "{{ $vmName }}" \
               --cpus "{{ $vm.Cpus }}" \
@@ -96,7 +96,7 @@ setup_vbox() {
         {{- end }}
       {{- end }}
               --uart1 0x3F8 4 \
-              --uartmode1 server "${BASE_PATH}/{{ $vmName }}-serial" \
+              --uartmode1 server $(realpath "{{ $lab.BasePath }}/{{ $vmName }}-serial") \
               --acpi on \
               --ioapic on
       {{- range $i, $ctrl := $vm.StorageControllers }}
@@ -141,45 +141,9 @@ setup_vbox() {
     {{- end }}
 }
 
-{{ template "prepare-bootimage" $lab }}
-
-setup_ssh() {
-    cat <<EOF >ssh.config
-Host controller-0
-  User sysadmin
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
-  GlobalKnownHostsFile /dev/null
-  Hostname 127.0.1.3
-  Port 2222
-
-Host controller-0-*
-  User sysadmin
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
-  GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@$127.0.1.3 -p 2222 nc $(echo %h | sed -s "s/controller-0-//") 22
-
-Host controller-1
-  User sysadmin
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
-  GlobalKnownHostsFile /dev/null
-  Hostname 127.0.1.4
-  Port 2222
-
-Host controller-1-*
-  User sysadmin
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
-  GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@$127.0.1.4 -p 2222 nc $(echo %h | sed -s "s/controller-1-//") 22
-EOF
-}
-
 check_natnet_setuid() {
     if [[ ! -u /usr/lib/virtualbox/VBoxNetNAT ]]; then
-        echo <<EOF
+        echo >&2 <<EOF
 WARNING! VBoxNetNAT is not setuid and it may fail to start. In case
 WARNING! "ps fax | grep VBoxNetNAT" shows is as <defunct> you can
 WARNING! fix it by running:
@@ -191,32 +155,16 @@ EOF
 }
 
 main() {
-    if [[ -z "${ROOT_PATH}" ]]; then
-        mkdir -p "{{ $lab.BasePath }}"
-            if [[ $? -ne 0 ]]; then
-                echo "ERR: '$@' failed. Return code: $?"
-                exit 1
-            fi
-        cp $BASH_SOURCE "{{ $lab.BasePath }}"/vbox-setup.sh
-        sed -i "s#^ROOT_PATH=#ROOT_PATH=$(pwd)#" \
-            "{{ $lab.BasePath }}"/vbox-setup.sh
-        sed -i "s#^BASE_PATH=#BASE_PATH=$(realpath {{ $lab.BasePath }})#" \
-            "{{ $lab.BasePath }}"/vbox-setup.sh
-        sed -i "s#^ISO_PATH=#ISO_PATH=$(realpath {{ $lab.InstallIso }})#" \
-            "{{ $lab.BasePath }}"/vbox-setup.sh
-        cd "{{ $lab.BasePath }}"
-        chmod a+x ./vbox-setup.sh
-        exec ./vbox-setup.sh
-    else
-        set -x
-        pushd ${ROOT_PATH}
-        #prepare_bootimage
-        popd
-        #setup_vbox
-        setup_ssh
-        check_natnet_setuid
-    fi
+    set -x
+    prepare_bootimage ${ISO_PATH}
+    setup_vbox
+    check_natnet_setuid
 }
 
+ISO_PATH=$1
+if [[ -z "${ISO_PATH}" ]]; then
+    echo 'ERROR! missing iso path' >&2
+    exit 1
+fi
 main
 {{- end }}

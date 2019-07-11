@@ -1,0 +1,63 @@
+{{- define "install-utils" -}}
+die() {
+    echo "ERR: $@"
+    exit 1
+}
+
+wait_ssh_up() {
+    local host=$1
+    local timeout_min=$2
+    local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    while true; do
+        [[ "$(date '+%s')" -lt "${deadline}" ]] || die
+        timeout 10 ssh -F ./ssh.config ${host} hostname \
+            && break
+        sleep 10
+    done
+}
+
+wait_ssh_down() {
+    local host=$1
+    local timeout_min=$2
+    local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    while true; do
+        [[ "$(date '+%s')" -lt "${deadline}" ]] || die
+        timeout 10 ssh -F ./ssh.config ${host} hostname \
+            || break
+        sleep 10
+    done
+}
+
+wait_platform_available() {
+    local host=$1
+    local timeout_min=$2
+    local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    while true; do
+        [[ "$(date '+%s')" -lt "${deadline}" ]] || die
+        timeout 10 ssh -F ./ssh.config ${host} bash <<EOF && echo OK
+[[ -f /etc/platform/openrc ]] || exit 1
+EOF
+        sleep 20
+    done
+}
+
+wait_host_status() {
+    local host=$1
+    local timeout_min=$2
+    local a=$3
+    local b=$4
+    local c=$5
+    local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    while true; do
+        [[ "$(date '+%s')" -lt "${deadline}" ]] || die
+        status=$(ssh -F ./ssh.config controller-0 bash <<'EOF' | awk "\$4==\"${host}\"{print \$6 \"/\" \$8 \"/\" \$10}"
+set -e
+source /etc/platform/openrc
+system host-list controller-0
+EOF
+              )
+        [[ "${status}" == "$a/$b/$c" ]] && break
+        sleep 10
+    done
+}
+{{- end }}
