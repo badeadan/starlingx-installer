@@ -1,4 +1,4 @@
-package main
+package lab
 
 type Disk struct {
 	Size   uint

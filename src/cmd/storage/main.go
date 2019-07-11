@@ -8,9 +8,10 @@ import (
 	"github.com/Masterminds/sprig"
 	"gopkg.in/yaml.v2"
 	"log"
+	"net"
 	"os"
 	"text/template"
-	"net"
+	"lab/types"
 )
 
 type StorageLab struct {
