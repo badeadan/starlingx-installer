@@ -95,12 +95,12 @@ func main() {
 			return mask, err
 		},
 	})
-	t = template.Must(t.ParseGlob("./templates/*.tmpl"))
+	t = template.Must(lab.DiscoverTemplates(t))
 	tw := &TarWriter{tar.NewWriter(os.Stdout)}
 
 	vbox := lab.Lab{}
 	buf := &bytes.Buffer{}
-	err := t.ExecuteTemplate(buf, "lab-storage-config", sl)
+	err := t.ExecuteTemplate(buf, "vbox/lab/storage", sl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func main() {
 	}
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "vbox-setup", vbox)
+	err = t.ExecuteTemplate(buf, "vbox/setup", vbox)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func main() {
 		0700, buf)
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "prepare-bootimage", sl)
+	err = t.ExecuteTemplate(buf, "vbox/prepare-bootimage", sl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func main() {
 		0700, buf)
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "install-storage", sl)
+	err = t.ExecuteTemplate(buf, "install/lab/storage", sl)
 	if err != nil {
 		log.Fatal(err)
 	}

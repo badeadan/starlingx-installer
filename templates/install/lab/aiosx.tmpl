@@ -1,4 +1,4 @@
-{{- define "install-aiosx" -}}
+{{- define "install/lab/aiosx" -}}
   {{- $lab := . -}}
 #!/usr/bin/env bash
 
@@ -9,8 +9,8 @@ APP_UPLOAD_TIMEOUT=${APP_UPLOAD_TIMEOUT:-10}
 APP_PLATFORM_INTEG_APPS_TIMEOUT=${APP_PLATFORM_INTEG_APPS_TIMEOUT:-20}
 APP_STX_OPENSTACK_TIMEOUT=${APP_STX_OPENSTACK_TIMEOUT:-50}
 
-{{ template "install-utils" }}
-{{ template "install-ssh" $lab }}
+{{ template "install/utils" }}
+{{ template "install/ssh" $lab }}
 
 set -x
 

@@ -1,4 +1,4 @@
-{{- define "install-ssh" }}
+{{- define "install/ssh" }}
   {{- $lab := . }}
 setup_ssh() {
     cat <<EOF >ssh.config

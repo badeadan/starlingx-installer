@@ -1,4 +1,4 @@
-{{- define "install-storage" -}}
+{{- define "install/lab/storage" -}}
   {{- $lab := . -}}
 #!/usr/bin/env bash
 
@@ -6,8 +6,8 @@ INSTALL_TIMEOUT=${INSTALL_TIMEOUT:-20}
 REBOOT_TIMEOUT=${REBOOT_TIMEOUT:-10}
 PLATFORM_TIMEOUT=${PLATFORM_TIMEOUT:-15}
 
-{{ template "install-utils" }}
-{{ template "install-ssh" }}
+{{ template "install/utils" }}
+{{ template "install/ssh" $lab }}
 
 set -x
 

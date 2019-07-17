@@ -80,7 +80,7 @@ func main() {
 
 	vbox := lab.Lab{}
 	buf := &bytes.Buffer{}
-	err := t.ExecuteTemplate(buf, "lab-aiosx-config", sx)
+	err := t.ExecuteTemplate(buf, "vbox/lab/aiosx", sx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func main() {
 	}
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "vbox-setup", vbox)
+	err = t.ExecuteTemplate(buf, "vbox/setup", vbox)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func main() {
 		0700, buf)
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "prepare-bootimage", sx)
+	err = t.ExecuteTemplate(buf, "vbox/prepare-bootimage", sx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func main() {
 		0700, buf)
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "install-aiosx", sx)
+	err = t.ExecuteTemplate(buf, "install/lab/aiosx", sx)
 	if err != nil {
 		log.Fatal(err)
 	}

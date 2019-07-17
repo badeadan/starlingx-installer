@@ -1,4 +1,4 @@
-{{- define "lab-storage-config" }}
+{{- define "vbox/lab/storage" }}
 {{- $lab := . }}
 group: "{{ $lab.Name }}"
 basepath: "."
@@ -23,12 +23,12 @@ networks:
       - "tcp:[{{ $lab.LoopBackPrefix }}.3]:2222:[{{ $lab.Oam.Controller0 }}]:22"
       - "tcp:[{{ $lab.LoopBackPrefix }}.4]:2222:[{{ $lab.Oam.Controller1 }}]:22"
 vms:
-  {{- dict "Id" 0 "Lab" $lab | include "controller" | nindent 2 }}
-  {{- dict "Id" 1 "Lab" $lab | include "controller" | nindent 2 }}
+  {{- dict "Id" 0 "Lab" $lab | include "vbox/machine/controller" | nindent 2 }}
+  {{- dict "Id" 1 "Lab" $lab | include "vbox/machine/controller" | nindent 2 }}
   {{- range $i := until (int $lab.ComputeCount) }}
-    {{- dict "Id" $i "Lab" $lab | include "compute" | nindent 2 }}
+    {{- dict "Id" $i "Lab" $lab | include "vbox/machine/compute" | nindent 2 }}
   {{- end }}
   {{- range $i := until (int $lab.StorageCount) }}
-    {{- dict "Id" $i "Lab" $lab | include "storage" | nindent 2 }}
+    {{- dict "Id" $i "Lab" $lab | include "vbox/machine/storage" | nindent 2 }}
   {{- end }}
 {{- end }}

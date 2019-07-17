@@ -1,4 +1,4 @@
-{{- define "lab-aiosx-config" }}
+{{- define "vbox/lab/aiosx" }}
 {{- $lab := . }}
 group: "{{ $lab.Name }}"
 basepath: "."
@@ -17,5 +17,5 @@ networks:
     portforward:
       - "tcp:[{{ $lab.LoopBackPrefix }}.3]:2222:[{{ $lab.Oam.FloatAddr }}]:22"
 vms:
-  {{- dict "Id" 0 "Lab" $lab | include "aiosx" | nindent 2 }}
+  {{- dict "Id" 0 "Lab" $lab | include "vbox/machine/aiosx" | nindent 2 }}
 {{- end }}

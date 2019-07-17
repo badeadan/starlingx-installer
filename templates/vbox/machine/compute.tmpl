@@ -1,35 +1,33 @@
-{{- define "storage" }}
+{{- define "vbox/machine/compute" }}
   {{- $lab := .Lab }}
   {{- $id := .Id }}
-  {{- $name := printf "storage-%d" .Id }}
+  {{- $name := printf "compute-%d" .Id }}
 - name:   "{{ $name }}"
-  cpus:   {{ $lab.StorageCpus }}
-  memory: {{ $lab.StorageMemory }}
+  cpus:   {{ $lab.ComputeCpus }}
+  memory: {{ $lab.ComputeMemory }}
   bootorder:
     - net
     - disk
   disks:
-  {{- range $i := $lab.StorageDiskCount | add1 | int | until }}
-    - medium: "{{ $name }}-{{ $i }}.vdi"
-      size:   {{ $lab.StorageDiskSize }}
-  {{- end }}
+    - medium: "{{ $name }}-0.vdi"
+      size:   {{ $lab.ComputeDiskSize }}
+    - medium: "{{ $name }}-1.vdi"
+      size:   {{ $lab.ComputeDiskSize }}
   storagecontrollers:
     - name:        "SATA1"
       type:        "sata"
       chipset:     "IntelAHCI"
-      portcount:   {{ add1 $lab.StorageDiskCount }}
+      portcount:   4
       hostiocache: true
       bootable:    true
   storageattachments:
-  {{- range $i :=  $lab.StorageDiskCount | add1 | int | until}}
     - controller:    "SATA1"
-      port:          {{ $i }}
+      port:          0
       device:        0
       type:          "hdd"
-      medium:        "{{ $name }}-{{ $i }}.vdi"
+      medium:        "{{ $name }}-0.vdi"
       nonrotational: true
       discard:       true
-  {{- end }}
   nics:
     - mode:     "intnet"
       network:  "{{ $lab.IntNetPrefix }}-unused"
@@ -41,4 +39,14 @@
       type:     "82540EM"
       promisc:  "allow-all"
       bootprio: 1
+    - mode:     "intnet"
+      network:  "{{ $lab.IntNetPrefix }}-data1"
+      type:     "virtio"
+      promisc:  "allow-all"
+      bootprio: 3
+    - mode:     "intnet"
+      network:  "{{ $lab.IntNetPrefix }}-data2"
+      type:     "virtio"
+      promisc:  "allow-all"
+      bootprio: 4
 {{- end }}
