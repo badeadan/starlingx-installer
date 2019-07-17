@@ -75,7 +75,7 @@ func main() {
 			return mask, err
 		},
 	})
-	t = template.Must(t.ParseGlob("./templates/*.tmpl"))
+	t = template.Must(lab.DiscoverTemplates(t))
 	tw := &TarWriter{tar.NewWriter(os.Stdout)}
 
 	vbox := lab.Lab{}
