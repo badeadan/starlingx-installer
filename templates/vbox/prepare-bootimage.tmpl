@@ -81,7 +81,7 @@ setup_custom_environment() {
     cat <<OUTER_EOF >>${ks_file}
 %post --erroronfail
 # side effect:  remove TMOUT
-cat <<EOF >/etc/profile.d/custom.sh
+cat <<'EOF' >/etc/profile.d/custom.sh
 resize() {
     old=$(stty -g)
     stty raw -echo min 0 time 5
