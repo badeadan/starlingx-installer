@@ -41,22 +41,24 @@ EOF
     done
 }
 
+#  TODO: create ssh host for floating address
+#        and use that instead of ACIVE_CONTROLLER
+ACTIVE_CONTROLLER=controller-0
+
 wait_host_status() {
     local host=$1
     local timeout_min=$2
-    local a=$3
-    local b=$4
-    local c=$5
+    local target=$3
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
     while true; do
         [[ "$(date '+%s')" -lt "${deadline}" ]] || die
-        status=$(ssh -F ./ssh.config controller-0 bash <<'EOF' | awk "\$4==\"${host}\"{print \$6 \"/\" \$8 \"/\" \$10}"
+        status=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} bash <<'EOF' | awk "\$4==\"${host}\"{print \$8 \"/\" \$10 \"/\" \$12}"
 set -e
 source /etc/platform/openrc
-system host-list controller-0
+system host-list
 EOF
               )
-        [[ "${status}" == "$a/$b/$c" ]] && break
+        [[ "${status}" =~ ${target} ]] && break
         sleep 10
     done
 }
@@ -67,11 +69,31 @@ wait_systemd_multi_user_target() {
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
     while true; do
         [[ "$(date '+%s')" -lt "${deadline}" ]] || die
-        status=$(ssh -F ./ssh.config controller-0 bash <<'EOF' | awk "\$1==\"multi-user.target\"{print \$2 \"/\" \$3 \"/\" \$4}"
+        status=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} bash <<'EOF' | awk "\$1==\"multi-user.target\"{print \$2 \"/\" \$3 \"/\" \$4}"
 systemctl list-units --type target 
 EOF
               )
         [[ "${status}" == "loaded/active/active" ]] && break
+        sleep 10
+    done
+}
+
+wait_application_status() {
+    local application=$1
+    local timeout_min=$2
+    local target_ok=$3
+    local target_error=$4
+    local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    while true; do
+        [[ "$(date '+%s')" -lt "${deadline}" ]] || die
+        status=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} bash <<'EOF' | awk "\$2==\"${application}\"{print \$10 \"/\" \$12}"
+set -e
+source /etc/platform/openrc
+system application-list
+EOF
+              )
+        [[ "${status}" =~ ${target_ok} ]] && break
+        [[ "${status}" =~ ${target_error} ]] && die
         sleep 10
     done
 }

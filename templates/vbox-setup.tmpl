@@ -3,6 +3,8 @@
 #!/usr/bin/env bash
 ISO_PATH=
 
+TOOL_DEPENDENCIES="vboxmanage"
+
 source ./prepare-bootimage.sh
 
 cleanup() {
@@ -36,6 +38,9 @@ run() {
 }
 
 setup_vbox() {
+    # remove older configs
+    rm -rf ~/.config/VirtualBox/{{ $lab.Group }}
+
     # setup networks
     #
     {{- range $i, $net := $lab.Networks }}
@@ -84,7 +89,7 @@ setup_vbox() {
               --register \
               --name "{{ $vmName }}" \
               --ostype Other_64 \
-              --basefolder "{{ $lab.BasePath }}" \
+              --basefolder $(realpath "{{ $lab.BasePath }}") \
               --groups "/{{ $.Group }}"
     run vboxmanage modifyvm "{{ $vmName }}" \
               --cpus "{{ $vm.Cpus }}" \
@@ -141,24 +146,41 @@ setup_vbox() {
     {{- end }}
 }
 
-check_natnet_setuid() {
-    if [[ ! -u /usr/lib/virtualbox/VBoxNetNAT ]]; then
-        echo >&2 <<EOF
-WARNING! VBoxNetNAT is not setuid and it may fail to start. In case
-WARNING! "ps fax | grep VBoxNetNAT" shows is as <defunct> you can
-WARNING! fix it by running:
-WARNING!
-WARNING!     sudo /usr/lib/virtualbox/ -type f -executable -exec chmod u+s {} \;
-WARNING!
+check_dependencies() {
+    for tool in ${TOOL_DEPENDENCIES}; do
+        if [[ -z "$(which ${tool})" ]]; then
+            cat >&2 <<EOF
+ERROR! Setup requires '${tool}'. Use your package manager
+ERROR! to install it then restart setup script.
 EOF
-    fi
+            exit 1
+        fi
+    done
+}
+
+setup_environment() {
+    cat >env.sh <<EOF
+{{- range $_, $vm := .Vms }}
+  {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+alias {{ $vmName }}-serial="socat stdio,raw,echo=0,icanon=0,escape=0x11 $(realpath '{{ $lab.BasePath }}/{{ $vmName }}-serial')"
+{{- end }}
+EOF
 }
 
 main() {
     set -x
+    if ! id -nG "$USER" | grep -qw "vboxusers"; then
+        cat >&2 <<EOF
+ERROR! Setup requires user '${USER}' to be in 'vboxusers' group.
+ERROR! Add it to that group and restart setup script. Example:
+ERROR!   sudo usermod -a -G vboxusers $USER
+EOF
+    fi
+    check_dependencies
     prepare_bootimage ${ISO_PATH}
     setup_vbox
-    check_natnet_setuid
+    setup_environment
+    echo "\nDONE!"
 }
 
 ISO_PATH=$1

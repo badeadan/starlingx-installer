@@ -1,5 +1,7 @@
 {{- define "prepare-bootimage" }}
   {{- $lab := . -}}
+TOOL_DEPENDENCIES+=" fuseiso rsync fusermount mkisofs"
+
 prepare_bootimage() {
     local iso=$1
     if [[ ! -f "${iso}" ]]; then
@@ -16,6 +18,9 @@ prepare_bootimage() {
     chmod -R +w ${TMP_PATCH_ISO_DIR}
     pushd ${TMP_PATCH_ISO_DIR}
     isolinux_boot_override || die
+    setup_custom_environment ks.cfg || die
+    setup_custom_environment smallsystem_ks.cfg || die
+    setup_custom_environment controller_ks.cfg || die
     setup_user_access ks.cfg || die
     setup_user_access smallsystem_ks.cfg || die
     setup_oam_interface ks.cfg || die
@@ -66,6 +71,25 @@ AllowAgentForwarding yes
 AllowTcpForwarding yes
 TCPKeepAlive yes
 PermitTunnel yes
+EOF
+%end
+OUTER_EOF
+}
+
+setup_custom_environment() {
+    local ks_file=$1
+    cat <<OUTER_EOF >>${ks_file}
+%post --erroronfail
+# side effect:  remove TMOUT
+cat <<EOF >/etc/profile.d/custom.sh
+resize() {
+    old=$(stty -g)
+    stty raw -echo min 0 time 5
+    printf '\033[18t' > /dev/tty
+    IFS=';t' read -r _ rows cols _ < /dev/tty
+    stty "$old"
+    stty cols "$cols" rows "$rows"
+}
 EOF
 %end
 OUTER_EOF
