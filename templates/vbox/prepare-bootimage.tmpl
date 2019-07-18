@@ -112,6 +112,7 @@ OUTER_EOF
 
 setup_known_hosts() {
     local ks_file=$1
+    [[ -f ~/.ssh/id_rsa.pub ]] || die
     cat <<OUTER_EOF >>${ks_file}
 %post --erroronfail
 mkdir -p /root/.ssh
