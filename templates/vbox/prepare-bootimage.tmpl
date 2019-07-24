@@ -30,6 +30,8 @@ prepare_bootimage() {
     setup_known_hosts controller_ks.cfg || die
     prepare_ansible ks.cfg || die
     prepare_ansible smallsystem_ks.cfg || die
+    fix_ldap_dev_random_wait ks.cfg || die
+    fix_ldap_dev_random_wait smallsystem_ks.cfg || die
     mkisofs -R -D -A 'oe_iso_boot' -V 'oe_iso_boot' \
             -quiet \
             -b isolinux.bin \
@@ -106,6 +108,15 @@ NETMASK={{ $lab.Oam.Network | NetCidrMask }}
 GATEWAY={{ $lab.Oam.Gateway }}
 ONBOOT=yes
 EOF
+%end
+OUTER_EOF
+}
+
+fix_ldap_dev_random_wait() {
+    local ks_file=$1
+    cat <<OUTER_EOF >>${ks_file}
+%post --erroronfail
+sed -i 's#/dev/random#/dev/urandom#g' /usr/local/lib/ldapscripts/runtime
 %end
 OUTER_EOF
 }
