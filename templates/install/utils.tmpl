@@ -97,4 +97,20 @@ EOF
         sleep 10
     done
 }
+
+wait_until_host_id_assigned() {
+    local id=$1
+    local timeout_min=$2
+    local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    while true; do
+        [[ "$(date '+%s')" -lt "${deadline}" ]] || die
+        status=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} bash <<EOF
+source /etc/platform/openrc
+system host-show ${id} 1>/dev/null 2>&1 && echo "exists"
+EOF
+              )
+        [[ "${status}" == "exists" ]] && break
+        sleep 10
+    done
+}
 {{- end }}

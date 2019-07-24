@@ -2,9 +2,12 @@
   {{- $lab := . -}}
 #!/usr/bin/env bash
 
-INSTALL_TIMEOUT=${INSTALL_TIMEOUT:-20}
-REBOOT_TIMEOUT=${REBOOT_TIMEOUT:-10}
-PLATFORM_TIMEOUT=${PLATFORM_TIMEOUT:-15}
+INSTALL_TIMEOUT=${INSTALL_TIMEOUT:-40}
+REBOOT_TIMEOUT=${REBOOT_TIMEOUT:-30}
+PLATFORM_TIMEOUT=${PLATFORM_TIMEOUT:-25}
+APP_UPLOAD_TIMEOUT=${APP_UPLOAD_TIMEOUT:-10}
+APP_PLATFORM_INTEG_APPS_TIMEOUT=${APP_PLATFORM_INTEG_APPS_TIMEOUT:-20}
+APP_STX_OPENSTACK_TIMEOUT=${APP_STX_OPENSTACK_TIMEOUT:-50}
 
 {{ template "install/utils" }}
 {{ template "install/ssh" $lab }}
@@ -30,8 +33,6 @@ source /etc/profile
 ansible-playbook /usr/share/ansible/stx-ansible/playbooks/bootstrap/bootstrap.yml \
                  -e "override_files_dir=/home/sysadmin"
 EOF
-
-ide_files_dir=/home/sysadmin" || die
 
 # platform provisioning
 #
@@ -70,67 +71,65 @@ source /etc/platform/openrc
 system host-unlock controller-0
 EOF
 wait_ssh_down controller-0 10
-wait_ssh_up controller-0 REBOOT_TIMEOUT
+wait_ssh_up controller-0 ${REBOOT_TIMEOUT}
+wait_systemd_multi_user_target controller-0 ${REBOOT_TIMEOUT}
+wait_platform_available controller-0 ${PLATFORM_TIMEOUT}
 
 wait_host_status controller-0 10 unlocked/enabled/available
+wait_application_status platform-integ-apps ${APP_PLATFORM_INTEG_APPS_TIMEOUT} applied/completed "apply-failed/.*"
 
-echo "################### DONE"
-exit 0
 # install remaining hosts
 #
-vboxmanage startvm ${CONTROLLER_1} --type headless
-wait_until_new_host
+NEXT_HOST_ID=2
+vboxmanage startvm {{ printf "%s-controller-1" $lab.Name }} --type headless || die
+wait_until_host_id_assigned ${NEXT_HOST_ID} 5
 ssh -F ./ssh.config controller-0 \
     bash <<EOF
 source /etc/platform/openrc
-system host-update 2 personality=controller
+system host-update ${NEXT_HOST_ID} personality=controller
 EOF
+NEXT_HOST_ID=$((NEXT_HOST_ID + 1))
 
-vboxmanage startvm ${COMPUTE_0} --type headless
-wait_until_new_host
+{{- range $i := until (int $lab.ComputeCount) }}
+vboxmanage startvm {{ printf "%s-compute-%d" $lab.Name $i }} --type headless || die
+wait_until_host_id_assigned ${NEXT_HOST_ID} 5
 ssh -F ./ssh.config controller-0 \
     bash <<EOF
 source /etc/platform/openrc
-system host-update 3 personality=compute
+system host-update ${NEXT_HOST_ID} personality=compute
 EOF
+NEXT_HOST_ID=$((NEXT_HOST_ID + 1))
+{{- end }}
 
-vboxmanage startvm ${COMPUTE_1} --type headless
-wait_until_new_host
+{{- range $i := until (int $lab.StorageCount) }}
+vboxmanage startvm {{ printf "%s-storage-%d" $lab.Name $i }} --type headless || die
+wait_until_host_id_assigned ${NEXT_HOST_ID} 5
 ssh -F ./ssh.config controller-0 \
     bash <<EOF
 source /etc/platform/openrc
-system host-update 4 personality=compute
+system host-update ${NEXT_HOST_ID} personality=storage
 EOF
+NEXT_HOST_ID=$((NEXT_HOST_ID + 1))
+{{- end }}
 
-vboxmanage startvm ${STORAGE_0} --type headless
-wait_until_new_host
-ssh -F ./ssh.config controller-0 \
-    bash <<EOF
-source /etc/platform/openrc
-system host-update 3 personality=storage
-EOF
+wait_host_status controller-1 ${INSTALL_TIMEOUT} locked/disabled/online
+{{- range $i := until (int $lab.ComputeCount) }}
+wait_host_status compute-{{ $i }} ${INSTALL_TIMEOUT} locked/disabled/online
+{{- end }}
+{{- range $i := until (int $lab.StorageCount) }}
+wait_host_status storage-{{ $i }} ${INSTALL_TIMEOUT} locked/disabled/online
+{{- end }}
 
-vboxmanage startvm ${STORAGE_1} --type headless
-wait_until_new_host
-ssh -F ./ssh.config controller-0 \
-    bash <<EOF
-source /etc/platform/openrc
-system host-update 4 personality=storage
-EOF
-
-wait_until_all_hosts_online
-
-# prepare compute nodes for containerized services
+# prepare nodes for containerized services
 #
 ssh -F ./ssh.config controller-0 \
     bash <<'EOF'
 source /etc/platform/openrc
 system host-label-assign controller-1 openstack-control-plane=enabled
-for NODE in compute-0 compute-1; do
-    system host-label-assign $NODE  openstack-compute-node=enabled
-    system host-label-assign $NODE  openvswitch=enabled
-    system host-label-assign $NODE  sriov=enabled
-done
+for NODE in $(seq -f compute-%.0f 0 {{ sub $lab.ComputeCount 1 }}); do
+  system host-label-assign $NODE openstack-compute-node=enabled
+  system host-label-assign $NODE openvswitch=enabled
+  system host-label-assign $NODE sriov=enabled
 EOF
 
 # provision controller-1
@@ -149,9 +148,104 @@ source /etc/platform/openrc
 system host-unlock controller-1
 EOF
 
-wait_until_enabled_available controller-1
+wait_host_status controller-1 $((REBOOT_TIMEOUT + 10)) unlocked/enabled/available
+ceph -s
+
+# provision storage
+#
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+{{- range $i := until (int $lab.StorageCount) }}
+system interface-network-assign storage-{{ $i }} $(system host-if-list -a storage-0 | awk '/mgmt0/{print $2}') cluster-host
+{{- end }}
+EOF
+
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+{{- range $i := until (int $lab.StorageCount) }}
+system host-stor-add storage-{{ $i }} $(system host-disk-list storage-0 | awk '/sdb/{print $2}')
+{{- end }}
+EOF
+
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+{{- range $i := until (int $lab.StorageCount) }}
+system host-unlock storage-{{ $i }}
+{{- end }}
+EOF
+
+{{- range $i := until (int $lab.StorageCount) }}
+wait_host_status storage-{{ $i }} $((REBOOT_TIMEOUT + 10)) unlocked/enabled/available
+{{- end }}
+ceph -s
 
 # provision computes
 #
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+{{- range $i := until (int $lab.ComputeCount) }}
+system interface-network-assign compute-{{ $i }} mgmt0 cluster-host
+{{- end }}
+EOF
 
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+
+DATA0IF=eth1000
+DATA1IF=eth1001
+PHYSNET0='physnet0'
+PHYSNET1='physnet1'
+SPL=/tmp/tmp-system-port-list
+SPIL=/tmp/tmp-system-host-if-list
+
+# configure the datanetworks in sysinv, prior to referencing it in the 'system host-if-modify command'.
+system datanetwork-add ${PHYSNET0} vlan
+system datanetwork-add ${PHYSNET1} vlan
+
+for COMPUTE in $(seq -f compute-%.0f 0 {{ sub $lab.ComputeCount 1 }}); do
+  echo "Configuring interface for: $COMPUTE"
+  system host-port-list ${COMPUTE} --nowrap > ${SPL}
+  system host-if-list -a ${COMPUTE} --nowrap > ${SPIL}
+  DATA0PCIADDR=$(cat $SPL | grep $DATA0IF |awk '{print $8}')
+  DATA1PCIADDR=$(cat $SPL | grep $DATA1IF |awk '{print $8}')
+  DATA0PORTUUID=$(cat $SPL | grep ${DATA0PCIADDR} | awk '{print $2}')
+  DATA1PORTUUID=$(cat $SPL | grep ${DATA1PCIADDR} | awk '{print $2}')
+  DATA0PORTNAME=$(cat $SPL | grep ${DATA0PCIADDR} | awk '{print $4}')
+  DATA1PORTNAME=$(cat  $SPL | grep ${DATA1PCIADDR} | awk '{print $4}')
+  DATA0IFUUID=$(cat $SPIL | awk -v DATA0PORTNAME=$DATA0PORTNAME '($12 ~ DATA0PORTNAME) {print $2}')
+  DATA1IFUUID=$(cat $SPIL | awk -v DATA1PORTNAME=$DATA1PORTNAME '($12 ~ DATA1PORTNAME) {print $2}')
+  system host-if-modify -m 1500 -n data0 -c data ${COMPUTE} ${DATA0IFUUID}
+  system host-if-modify -m 1500 -n data1 -c data ${COMPUTE} ${DATA1IFUUID}
+  system interface-datanetwork-assign ${COMPUTE} ${DATA0IFUUID} ${PHYSNET0}
+  system interface-datanetwork-assign ${COMPUTE} ${DATA1IFUUID} ${PHYSNET1}
+done
+EOF
+
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+for COMPUTE in $(seq -f compute-%.0f 0 {{ sub $lab.ComputeCount 1 }}); do
+  echo "Configuring nova local for: $COMPUTE"
+  ROOT_DISK=$(system host-show ${COMPUTE} | grep rootfs | awk '{print $4}')
+  ROOT_DISK_UUID=$(system host-disk-list ${COMPUTE} --nowrap | grep ${ROOT_DISK} | awk '{print $2}')
+  PARTITION_SIZE=10
+  NOVA_PARTITION=$(system host-disk-partition-add -t lvm_phys_vol ${COMPUTE} ${ROOT_DISK_UUID} ${PARTITION_SIZE})
+  NOVA_PARTITION_UUID=$(echo ${NOVA_PARTITION} | grep -ow "| uuid | [a-z0-9\-]* |" | awk '{print $4}')
+  system host-lvg-add ${COMPUTE} nova-local
+  system host-pv-add ${COMPUTE} nova-local ${NOVA_PARTITION_UUID}
+done
+EOF
+
+{{- range $i := until (int $lab.ComputeCount) }}
+wait_host_status compute-{{ $i }} $((REBOOT_TIMEOUT + 10)) unlocked/enabled/available
+{{- end }}
+
+echo "################### PLATFORM IS READY"
+
+{{ template "install/lab/openstack" $lab }}
 {{- end }}
