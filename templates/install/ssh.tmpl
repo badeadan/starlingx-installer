@@ -15,7 +15,7 @@ Host controller-0-*
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@${{ $lab.LoopBackPrefix }}.3 -p 2222 nc $(echo %h | sed -s "s/controller-0-//") 22
+  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@{{ $lab.LoopBackPrefix }}.3 -p 2222 nc $(echo %h | sed -s "s/controller-0-//") 22
 
 {{- if ne $lab.SystemMode "simplex" }}
 Host controller-1
@@ -31,7 +31,7 @@ Host controller-1-*
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@${{ $lab.LoopBackPrefix }}.4 -p 2222 nc $(echo %h | sed -s "s/controller-1-//") 22
+  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@{{ $lab.LoopBackPrefix }}.4 -p 2222 nc $(echo %h | sed -s "s/controller-1-//") 22
 {{- end }}
 EOF
 }
