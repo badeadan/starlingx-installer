@@ -6,8 +6,8 @@
   cpus:   {{ $lab.ComputeCpus }}
   memory: {{ $lab.ComputeMemory }}
   bootorder:
-    - net
     - disk
+    - net
   disks:
     - medium: "{{ $name }}-0.vdi"
       size:   {{ $lab.ComputeDiskSize }}

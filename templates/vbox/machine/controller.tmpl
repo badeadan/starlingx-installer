@@ -10,8 +10,8 @@
     - dvd
     - disk
   {{- else }}
-    - net
     - disk
+    - net
   {{- end }}
   disks:
     - medium: "{{ $name }}-0.vdi"
