@@ -5,6 +5,7 @@
 INSTALL_TIMEOUT=${INSTALL_TIMEOUT:-40}
 REBOOT_TIMEOUT=${REBOOT_TIMEOUT:-30}
 PLATFORM_TIMEOUT=${PLATFORM_TIMEOUT:-25}
+DRBD_SYNC_TIMEOUT=${DRBD_SYNC_TIMEOUT=$:-25}
 APP_UPLOAD_TIMEOUT=${APP_UPLOAD_TIMEOUT:-10}
 APP_PLATFORM_INTEG_APPS_TIMEOUT=${APP_PLATFORM_INTEG_APPS_TIMEOUT:-20}
 APP_STX_OPENSTACK_TIMEOUT=${APP_STX_OPENSTACK_TIMEOUT:-50}
@@ -76,7 +77,6 @@ wait_systemd_multi_user_target controller-0 ${REBOOT_TIMEOUT}
 wait_platform_available controller-0 ${PLATFORM_TIMEOUT}
 
 wait_host_status controller-0 10 unlocked/enabled/available
-wait_application_status platform-integ-apps ${APP_PLATFORM_INTEG_APPS_TIMEOUT} applied/completed "apply-failed/.*"
 
 # install remaining hosts
 #
@@ -91,17 +91,19 @@ EOF
 NEXT_HOST_ID=$((NEXT_HOST_ID + 1))
 
 {{- range $i := until (int $lab.ComputeCount) }}
+sleep 30
 vboxmanage startvm {{ printf "%s-compute-%d" $lab.Name $i }} --type headless || die
 wait_until_host_id_assigned ${NEXT_HOST_ID} 5
 ssh -F ./ssh.config controller-0 \
     bash <<EOF
 source /etc/platform/openrc
-system host-update ${NEXT_HOST_ID} personality=compute
+system host-update ${NEXT_HOST_ID} personality=worker hostname=compute-{{ $i }}
 EOF
 NEXT_HOST_ID=$((NEXT_HOST_ID + 1))
 {{- end }}
 
 {{- range $i := until (int $lab.StorageCount) }}
+sleep 30
 vboxmanage startvm {{ printf "%s-storage-%d" $lab.Name $i }} --type headless || die
 wait_until_host_id_assigned ${NEXT_HOST_ID} 5
 ssh -F ./ssh.config controller-0 \
@@ -130,6 +132,7 @@ for NODE in $(seq -f compute-%.0f 0 {{ sub $lab.ComputeCount 1 }}); do
   system host-label-assign $NODE openstack-compute-node=enabled
   system host-label-assign $NODE openvswitch=enabled
   system host-label-assign $NODE sriov=enabled
+done
 EOF
 
 # provision controller-1
@@ -148,7 +151,7 @@ source /etc/platform/openrc
 system host-unlock controller-1
 EOF
 
-wait_host_status controller-1 $((REBOOT_TIMEOUT + 10)) unlocked/enabled/available
+wait_host_status controller-1 $((REBOOT_TIMEOUT + DRBD_SYNC_TIMEOUT)) unlocked/enabled/available
 ceph -s
 
 # provision storage
@@ -157,7 +160,7 @@ ssh -F ./ssh.config controller-0 \
     bash <<'EOF'
 source /etc/platform/openrc
 {{- range $i := until (int $lab.StorageCount) }}
-system interface-network-assign storage-{{ $i }} $(system host-if-list -a storage-0 | awk '/mgmt0/{print $2}') cluster-host
+system interface-network-assign storage-{{ $i }} $(system host-if-list -a storage-{{ $i }} | awk '/mgmt0/{print $2}') cluster-host
 {{- end }}
 EOF
 
@@ -165,7 +168,7 @@ ssh -F ./ssh.config controller-0 \
     bash <<'EOF'
 source /etc/platform/openrc
 {{- range $i := until (int $lab.StorageCount) }}
-system host-stor-add storage-{{ $i }} $(system host-disk-list storage-0 | awk '/sdb/{print $2}')
+system host-stor-add storage-{{ $i }} $(system host-disk-list storage-{{ $i }} | awk '/sdb/{print $2}')
 {{- end }}
 EOF
 
@@ -241,9 +244,19 @@ for COMPUTE in $(seq -f compute-%.0f 0 {{ sub $lab.ComputeCount 1 }}); do
 done
 EOF
 
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+{{- range $i := until (int $lab.ComputeCount) }}
+system host-unlock compute-{{ $i }}
+{{- end }}
+EOF
+
 {{- range $i := until (int $lab.ComputeCount) }}
 wait_host_status compute-{{ $i }} $((REBOOT_TIMEOUT + 10)) unlocked/enabled/available
 {{- end }}
+
+wait_application_status platform-integ-apps ${APP_PLATFORM_INTEG_APPS_TIMEOUT} applied/completed "apply-failed/.*"
 
 echo "################### PLATFORM IS READY"
 
