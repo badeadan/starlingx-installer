@@ -15,6 +15,7 @@ CEPH_MON_QUORUM_TIMEOUT=5
 {{ template "install/ssh" $lab }}
 
 set -x
+{{ template "install/skip" }}
 
 # prepare ssh config
 #

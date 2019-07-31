@@ -13,6 +13,7 @@ APP_STX_OPENSTACK_TIMEOUT=${APP_STX_OPENSTACK_TIMEOUT:-50}
 {{ template "install/ssh" $lab }}
 
 set -x
+{{ template "install/skip" }}
 
 # prepare ssh config
 #
