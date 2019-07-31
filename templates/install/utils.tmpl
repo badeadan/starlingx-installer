@@ -135,5 +135,25 @@ EOF
     done
     set -$oldopt
 }
+
+wait_until_ceph_mon_quorum() {
+    local oldopt=$- ; set +x
+    local timeout_min=$1
+    local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    local prev
+    while true; do
+        [[ "$(date '+%s')" -lt "${deadline}" ]] || die
+        count=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} python <<EOF
+import json
+import subprocess
+print len(json.loads(subprocess.check_output('ceph -f json mon_status', shell=True))['quorum'])
+EOF
+              )
+        [[ "${count}" != "${prev}" ]] && prev="${count}" && echo "ceph quorum count=${count}"
+        [[ "${count}" -ge "2" ]] && break
+        sleep 10
+    done
+    set -$oldopt
 }
+
 {{- end }}

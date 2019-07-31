@@ -9,6 +9,7 @@ DRBD_SYNC_TIMEOUT=${DRBD_SYNC_TIMEOUT=$:-25}
 APP_UPLOAD_TIMEOUT=${APP_UPLOAD_TIMEOUT:-10}
 APP_PLATFORM_INTEG_APPS_TIMEOUT=${APP_PLATFORM_INTEG_APPS_TIMEOUT:-20}
 APP_STX_OPENSTACK_TIMEOUT=${APP_STX_OPENSTACK_TIMEOUT:-50}
+CEPH_MON_QUORUM_TIMEOUT=5
 
 {{ template "install/utils" }}
 {{ template "install/ssh" $lab }}
@@ -152,7 +153,12 @@ system host-unlock controller-1
 EOF
 
 wait_host_status controller-1 $((REBOOT_TIMEOUT + DRBD_SYNC_TIMEOUT)) unlocked/enabled/available
+wait_until_ceph_mon_quorum ${CEPH_MON_QUORUM_TIMEOUT}
+
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
 ceph -s
+EOF
 
 # provision storage
 #
