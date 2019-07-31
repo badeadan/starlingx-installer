@@ -5,6 +5,7 @@ die() {
 }
 
 wait_ssh_up() {
+    local oldopt=$- ; set +x
     local host=$1
     local timeout_min=$2
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
@@ -14,9 +15,11 @@ wait_ssh_up() {
             && break
         sleep 10
     done
+    set -$oldopt
 }
 
 wait_ssh_down() {
+    local oldopt=$- ; set +x
     local host=$1
     local timeout_min=$2
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
@@ -26,9 +29,11 @@ wait_ssh_down() {
             || break
         sleep 10
     done
+    set -$oldopt
 }
 
 wait_platform_available() {
+    local oldopt=$- ; set +x
     local host=$1
     local timeout_min=$2
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
@@ -39,6 +44,7 @@ wait_platform_available() {
 EOF
         sleep 20
     done
+    set -$oldopt
 }
 
 #  TODO: create ssh host for floating address
@@ -46,10 +52,12 @@ EOF
 ACTIVE_CONTROLLER=controller-0
 
 wait_host_status() {
+    local oldopt=$- ; set +x
     local host=$1
     local timeout_min=$2
     local target=$3
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    local prev
     while true; do
         [[ "$(date '+%s')" -lt "${deadline}" ]] || die
         status=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} bash <<'EOF' | awk "\$4==\"${host}\"{print \$8 \"/\" \$10 \"/\" \$12}"
@@ -58,32 +66,40 @@ source /etc/platform/openrc
 system host-list
 EOF
               )
+        [[ "${status}" != "${prev}" ]] && prev="${status}" && echo "host=${host} status=${status}"
         [[ "${status}" =~ ${target} ]] && break
         sleep 10
     done
+    set -$oldopt
 }
 
 wait_systemd_multi_user_target() {
+    local oldopt=$- ; set +x
     local host=$1
     local timeout_min=$2
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    local prev
     while true; do
         [[ "$(date '+%s')" -lt "${deadline}" ]] || die
         status=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} bash <<'EOF' | awk "\$1==\"multi-user.target\"{print \$2 \"/\" \$3 \"/\" \$4}"
 systemctl list-units --type target 
 EOF
               )
+        [[ "${status}" != "${prev}" ]] && prev="${status}" && echo "host=${host} systemd.multi-user.target=${status}"
         [[ "${status}" == "loaded/active/active" ]] && break
         sleep 10
     done
+    set -$oldopt
 }
 
 wait_application_status() {
+    local oldopt=$- ; set +x
     local application=$1
     local timeout_min=$2
     local target_ok=$3
     local target_error=$4
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    local prev
     while true; do
         [[ "$(date '+%s')" -lt "${deadline}" ]] || die
         status=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} bash <<'EOF' | awk "\$2==\"${application}\"{print \$10 \"/\" \$12}"
@@ -92,16 +108,20 @@ source /etc/platform/openrc
 system application-list
 EOF
               )
+        [[ "${status}" != "${prev}" ]] && prev="${status}" && echo "application=${application} status=${status}"
         [[ "${status}" =~ ${target_ok} ]] && break
         [[ "${status}" =~ ${target_error} ]] && die
         sleep 10
     done
+    set -$oldopt
 }
 
 wait_until_host_id_assigned() {
+    local oldopt=$- ; set +x
     local id=$1
     local timeout_min=$2
     local deadline=$(($(date '+%s') + ${timeout_min} * 60))
+    local prev
     while true; do
         [[ "$(date '+%s')" -lt "${deadline}" ]] || die
         status=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} bash <<EOF
@@ -109,8 +129,11 @@ source /etc/platform/openrc
 system host-show ${id} 1>/dev/null 2>&1 && echo "exists"
 EOF
               )
+        [[ "${status}" != "${prev}" ]] && prev="${status}" && echo "host_id=${id} status=${status}"
         [[ "${status}" == "exists" ]] && break
         sleep 10
     done
+    set -$oldopt
+}
 }
 {{- end }}
