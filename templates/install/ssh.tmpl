@@ -2,6 +2,7 @@
   {{- $lab := . }}
 setup_ssh() {
     cat <<EOF >ssh.config
+LogLevel ERROR
 Host controller-0
   User sysadmin
   StrictHostKeyChecking no
