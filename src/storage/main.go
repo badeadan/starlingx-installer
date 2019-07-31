@@ -136,6 +136,15 @@ func main() {
 		fmt.Sprintf("%s/install.sh", sl.Name),
 		0700, buf)
 
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "vbox/vmctl", vbox)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/vmctl.sh", sl.Name),
+		0700, buf)
+
 	err = tw.Close()
 	if err != nil {
 		log.Fatal(err)

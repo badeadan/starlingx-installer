@@ -1,0 +1,63 @@
+{{- define "vbox/vmctl" -}}
+  {{- $lab := . -}}
+#!/usr/bin/env bash
+
+pause() {
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+    vboxmanage controlvm "{{ $vmName }}" pause
+    {{- end }}
+}
+
+resume() {
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+    vboxmanage controlvm "{{ $vmName }}" resume
+    {{- end }}
+}
+
+snapshot() {
+    local name=$1
+    pause "$1"
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+    vboxmanage snapshot "{{ $vmName }}" take "${name}"
+    {{- end }}
+    resume "$1"
+}
+
+restore() {
+    local name="$1"
+    pause
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+    vboxmanage snapshot "{{ $vmName }}" restore "${name}"
+    vboxmanage discardstate "{{ $vmName }}"
+    nohup vboxheadless --start-paused --startvm "{{ $vmName }}" >/dev/null 2>&1 &
+    {{- end }}
+    sleep 10
+    resume
+}
+
+usage() {
+    echo <<EOF >&2
+Usage: vmctl [snapshot|restore] <snapshot-name>
+EOF
+}
+
+case "$1" in
+snapshot)
+    snapshot "$2"
+    ;;
+restore)
+    restore "$2"
+    ;;
+*)
+    usage
+    ;;
+esac
+{{- end }}

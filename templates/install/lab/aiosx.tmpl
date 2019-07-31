@@ -141,5 +141,5 @@ wait_application_status platform-integ-apps ${APP_PLATFORM_INTEG_APPS_TIMEOUT} a
 
 echo "################### PLATFORM IS READY"
 
-{{ template "include/lab/openstack.tmpl" }}
+{{ template "install/lab/openstack" $lab }}
 {{- end }}
