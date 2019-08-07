@@ -1,0 +1,282 @@
+{{- define "install/lab/aiodx" -}}
+  {{- $lab := . -}}
+#!/usr/bin/env bash
+
+INSTALL_TIMEOUT=${INSTALL_TIMEOUT:-40}
+REBOOT_TIMEOUT=${REBOOT_TIMEOUT:-30}
+PLATFORM_TIMEOUT=${PLATFORM_TIMEOUT:-25}
+DRBD_SYNC_TIMEOUT=${DRBD_SYNC_TIMEOUT:-25}
+APP_UPLOAD_TIMEOUT=${APP_UPLOAD_TIMEOUT:-10}
+APP_PLATFORM_INTEG_APPS_TIMEOUT=${APP_PLATFORM_INTEG_APPS_TIMEOUT:-20}
+APP_STX_OPENSTACK_TIMEOUT=${APP_STX_OPENSTACK_TIMEOUT:-50}
+
+{{ template "install/utils" }}
+{{ template "install/ssh" $lab }}
+
+set -x
+{{ template "install/skip" }}
+
+# prepare ssh config
+#
+setup_ssh
+
+# boot controller-0
+#
+vboxmanage startvm {{ printf "%s-controller-0" $lab.Name }} --type headless || die
+wait_ssh_up controller-0 ${INSTALL_TIMEOUT}
+wait_systemd_multi_user_target controller-0 ${REBOOT_TIMEOUT}
+
+sleep 120
+
+echo "# run ansible playbook"
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF' || die
+source /etc/profile
+ansible-playbook /usr/share/ansible/stx-ansible/playbooks/bootstrap/bootstrap.yml \
+                 -e "override_files_dir=/home/sysadmin"
+EOF
+
+# platform provisioning
+#
+wait_platform_available controller-0 ${PLATFORM_TIMEOUT}
+
+echo "# configure OAM interface"
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF' || die
+source /etc/platform/openrc
+OAM_IF=enp0s3
+MGMT_IF=enp0s8
+system host-if-modify controller-0 lo -c none
+IFNET_UUIDS=$(system interface-network-list controller-0 | awk '{if ($6 =="lo") print $4;}')
+for UUID in $IFNET_UUIDS; do
+    system interface-network-remove ${UUID}
+done
+system host-if-modify controller-0 $OAM_IF -c platform
+system interface-network-assign controller-0 $OAM_IF oam
+system host-if-modify controller-0 $MGMT_IF -c platform
+system interface-network-assign controller-0 $MGMT_IF mgmt
+system interface-network-assign controller-0 $MGMT_IF cluster-host
+EOF
+
+echo "# configure data interfaces"
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF' || die
+DATA0IF=eth1000
+DATA1IF=eth1001
+export COMPUTE=controller-0
+PHYSNET0='physnet0'
+PHYSNET1='physnet1'
+SPL=/tmp/tmp-system-port-list
+SPIL=/tmp/tmp-system-host-if-list
+source /etc/platform/openrc
+system host-port-list ${COMPUTE} --nowrap > ${SPL}
+system host-if-list -a ${COMPUTE} --nowrap > ${SPIL}
+DATA0PCIADDR=$(cat $SPL | grep $DATA0IF |awk '{print $8}')
+DATA1PCIADDR=$(cat $SPL | grep $DATA1IF |awk '{print $8}')
+DATA0PORTUUID=$(cat $SPL | grep ${DATA0PCIADDR} | awk '{print $2}')
+DATA1PORTUUID=$(cat $SPL | grep ${DATA1PCIADDR} | awk '{print $2}')
+DATA0PORTNAME=$(cat $SPL | grep ${DATA0PCIADDR} | awk '{print $4}')
+DATA1PORTNAME=$(cat  $SPL | grep ${DATA1PCIADDR} | awk '{print $4}')
+DATA0IFUUID=$(cat $SPIL | awk -v DATA0PORTNAME=$DATA0PORTNAME '($12 ~ DATA0PORTNAME) {print $2}')
+DATA1IFUUID=$(cat $SPIL | awk -v DATA1PORTNAME=$DATA1PORTNAME '($12 ~ DATA1PORTNAME) {print $2}')
+
+set -x
+# configure the datanetworks in sysinv, prior to referencing it in the 'system host-if-modify command'
+system datanetwork-add ${PHYSNET0} vlan
+system datanetwork-add ${PHYSNET1} vlan
+
+# the host-if-modify '-p' flag is deprecated in favor of  the '-d' flag for assignment of datanetworks.
+system host-if-modify -m 1500 -n data0 -c data ${COMPUTE} ${DATA0IFUUID}
+system host-if-modify -m 1500 -n data1 -c data ${COMPUTE} ${DATA1IFUUID}
+system interface-datanetwork-assign ${COMPUTE} ${DATA0IFUUID} ${PHYSNET0}
+system interface-datanetwork-assign ${COMPUTE} ${DATA1IFUUID} ${PHYSNET1}
+EOF
+
+echo "# prepare the host for running containerized services"
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF' || die
+source /etc/platform/openrc
+system host-label-assign controller-0 openstack-control-plane=enabled
+system host-label-assign controller-0 openstack-compute-node=enabled
+system host-label-assign controller-0 openvswitch=enabled
+system host-label-assign controller-0 sriov=enabled
+EOF
+
+echo "# setup partitions for controller-0"
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF' || die
+export COMPUTE=controller-0
+source /etc/platform/openrc
+
+echo ">>> Getting root disk info"
+ROOT_DISK=$(system host-show ${COMPUTE} | grep rootfs | awk '{print $4}')
+ROOT_DISK_UUID=$(system host-disk-list ${COMPUTE} --nowrap | grep ${ROOT_DISK} | awk '{print $2}')
+echo "Root disk: $ROOT_DISK, UUID: $ROOT_DISK_UUID"
+
+echo ">>>> Configuring nova-local"
+NOVA_SIZE=24
+NOVA_PARTITION=$(system host-disk-partition-add -t lvm_phys_vol ${COMPUTE} ${ROOT_DISK_UUID} ${NOVA_SIZE})
+NOVA_PARTITION_UUID=$(echo ${NOVA_PARTITION} | grep -ow "| uuid | [a-z0-9\-]* |" | awk '{print $4}')
+system host-lvg-add ${COMPUTE} nova-local
+system host-pv-add ${COMPUTE} nova-local ${NOVA_PARTITION_UUID}
+sleep 2
+
+echo ">>> Wait for partition $NOVA_PARTITION_UUID to be ready."
+while true; do system host-disk-partition-list $COMPUTE --nowrap | grep $NOVA_PARTITION_UUID | grep Ready; if [ $? -eq 0 ]; then break; fi; sleep 1; done
+EOF
+
+echo "# configure ceph"
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF' || die
+source /etc/platform/openrc
+echo ">>> Add OSDs to primary tier"
+system host-disk-list controller-0
+system host-disk-list controller-0 | awk '/\/dev\/sdb/{print $2}' | xargs -i system host-stor-add controller-0 {}
+system host-stor-list controller-0
+EOF
+
+echo "# unlock controller-0"
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF' || die
+source /etc/platform/openrc
+system host-unlock controller-0
+EOF
+wait_ssh_down controller-0 10
+wait_ssh_up controller-0 REBOOT_TIMEOUT
+wait_systemd_multi_user_target controller-0 ${REBOOT_TIMEOUT}
+wait_platform_available controller-0 ${PLATFORM_TIMEOUT}
+
+wait_host_status controller-0 10 unlocked/enabled/available
+
+# install controller-1
+#
+vboxmanage startvm {{ printf "%s-controller-1" $lab.Name }} --type headless || die
+wait_until_host_id_assigned 2 5
+ssh -F ./ssh.config controller-0 \
+    bash <<EOF
+source /etc/platform/openrc
+set -x
+system host-update 2 personality=controller
+EOF
+wait_host_status controller-1 ${INSTALL_TIMEOUT} locked/disabled/online
+
+# configure data interfaces for controller-1
+#
+echo "# configure data interfaces"
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF' || die
+source /etc/platform/openrc
+export COMPUTE='controller-1' 
+PHYSNET0='physnet0' 
+PHYSNET1='physnet1' 
+OAM_IF=enp0s3
+DATA0IF=eth1000 
+DATA1IF=eth1001 
+NOWRAP="--nowrap"
+
+set -x
+echo ">>> Configuring OAM Network"
+system host-if-modify -n oam0 -c platform ${COMPUTE} $(system host-if-list -a $COMPUTE  $NOWRAP | awk -v OAM_IF=$OAM_IF '{if ($4 == OAM_IF) { print $2;}}')
+system interface-network-assign controller-1 oam0 oam
+
+echo ">>> Configuring Cluster Host Interface"
+system interface-network-assign controller-1 mgmt0 cluster-host
+
+echo ">>> Configuring Data Networks"
+SPL=/tmp/tmp-system-port-list  
+SPIL=/tmp/tmp-system-host-if-list  
+system host-port-list ${COMPUTE} $NOWRAP > ${SPL}  
+system host-if-list -a ${COMPUTE} $NOWRAP > ${SPIL}  
+DATA0PCIADDR=$(cat $SPL | grep $DATA0IF |awk '{print $8}')  
+DATA1PCIADDR=$(cat $SPL | grep $DATA1IF |awk '{print $8}')  
+DATA0PORTUUID=$(cat $SPL | grep ${DATA0PCIADDR} | awk '{print $2}')  
+DATA1PORTUUID=$(cat $SPL | grep ${DATA1PCIADDR} | awk '{print $2}')  
+DATA0PORTNAME=$(cat $SPL | grep ${DATA0PCIADDR} | awk '{print $4}')  
+DATA1PORTNAME=$(cat  $SPL | grep ${DATA1PCIADDR} | awk '{print $4}')  
+DATA0IFUUID=$(cat $SPIL | awk -v DATA0PORTNAME=$DATA0PORTNAME '($12 ~ DATA0PORTNAME) {print $2}')  
+DATA1IFUUID=$(cat $SPIL | awk -v DATA1PORTNAME=$DATA1PORTNAME '($12 ~ DATA1PORTNAME) {print $2}')  
+system host-if-modify -m 1500 -n data0 -c data ${COMPUTE} ${DATA0IFUUID}  
+system host-if-modify -m 1500 -n data1 -c data ${COMPUTE} ${DATA1IFUUID}
+system interface-datanetwork-assign ${COMPUTE} ${DATA0IFUUID} ${PHYSNET0}
+system interface-datanetwork-assign ${COMPUTE} ${DATA1IFUUID} ${PHYSNET1}
+EOF
+
+# prepare controller-1 for containerized services
+#
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+set -x
+system host-label-assign controller-1 openstack-control-plane=enabled
+system host-label-assign controller-1 openstack-compute-node=enabled
+system host-label-assign controller-1 openvswitch=enabled
+system host-label-assign controller-1 sriov=enabled
+EOF
+
+# setup partitions for controller-1
+#
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+set -x
+export COMPUTE=controller-1
+echo ">>> Getting root disk info"
+ROOT_DISK=$(system host-show ${COMPUTE} | grep rootfs | awk '{print $4}')
+ROOT_DISK_UUID=$(system host-disk-list ${COMPUTE} --nowrap | grep ${ROOT_DISK} | awk '{print $2}')
+echo "Root disk: $ROOT_DISK, UUID: $ROOT_DISK_UUID"
+echo ">>>> Configuring nova-local"
+NOVA_SIZE=24
+NOVA_PARTITION=$(system host-disk-partition-add -t lvm_phys_vol ${COMPUTE} ${ROOT_DISK_UUID} ${NOVA_SIZE})
+NOVA_PARTITION_UUID=$(echo ${NOVA_PARTITION} | grep -ow "| uuid | [a-z0-9\-]* |" | awk '{print $4}')
+system host-lvg-add ${COMPUTE} nova-local
+system host-pv-add ${COMPUTE} nova-local ${NOVA_PARTITION_UUID}
+echo ">>>> Extending cgts-vg"
+PARTITION_SIZE=6
+CGTS_PARTITION=$(system host-disk-partition-add -t lvm_phys_vol ${COMPUTE} ${ROOT_DISK_UUID} ${PARTITION_SIZE})
+CGTS_PARTITION_UUID=$(echo ${CGTS_PARTITION} | grep -ow "| uuid | [a-z0-9\-]* |" | awk '{print $4}')
+system host-pv-add ${COMPUTE} cgts-vg ${CGTS_PARTITION_UUID}
+EOF
+
+# setup ceph for controller-1
+#
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+set -x
+echo ">>> Get disk & tier info"
+HOST="controller-1"
+DISKS=$(system host-disk-list ${HOST})
+TIERS=$(system storage-tier-list ceph_cluster)
+echo "Disks:"
+echo "$DISKS"
+echo "Tiers:"
+echo "$TIERS"
+echo ">>> Add OSDs to primary tier"
+system host-stor-add ${HOST} $(echo "$DISKS" | grep /dev/sdb | awk '{print $2}') --tier-uuid $(echo "$TIERS" | grep storage | awk '{print $2}')
+echo ">>> system host-stor-list ${HOST}"
+system host-stor-list ${HOST}
+echo ">>> ceph osd tree"
+ceph osd tree
+EOF
+
+# unlock controller-1
+#
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+set -x
+system host-unlock controller-1
+EOF
+wait_host_status controller-1 $((REBOOT_TIMEOUT + DRBD_SYNC_TIMEOUT)) unlocked/enabled/available
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+set -x
+ceph -s
+EOF
+
+wait_application_status platform-integ-apps ${APP_PLATFORM_INTEG_APPS_TIMEOUT} applied/completed "apply-failed/.*"
+
+echo "################### PLATFORM IS READY"
+
+{{ template "install/lab/openstack" $lab }}
+{{- end }}

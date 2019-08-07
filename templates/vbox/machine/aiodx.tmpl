@@ -1,0 +1,75 @@
+{{- define "vbox/machine/aiodx" }}
+  {{- $lab := .Lab }}
+  {{- $id := .Id }}
+  {{- $name := printf "controller-%d" .Id }}
+- name:   "controller-{{ $id }}"
+  cpus:   {{ $lab.Cpus }}
+  memory: {{ $lab.Memory }}
+  bootorder:
+  {{- if eq $id 0 }}
+    - dvd
+    - disk
+  {{- else }}
+    - disk
+    - net
+  {{- end }}
+  disks:
+    - medium: "{{ $name }}-0.vdi"
+      size:   {{ $lab.DiskSize }}
+    - medium: "{{ $name }}-1.vdi"
+      size:   {{ $lab.DiskSize }}
+  storagecontrollers:
+  {{- if eq $id 0 }}
+    - name:        "IDE1"
+      type:        "ide"
+      chipset:     "PIIX4"
+      hostiocache: true
+      bootable:    true
+  {{- end }}
+    - name:        "SATA1"
+      type:        "sata"
+      chipset:     "IntelAHCI"
+      portcount:   4
+      hostiocache: true
+      bootable:    true
+  storageattachments:
+  {{- if eq $id 0 }}
+    - controller:    "IDE1"
+      port:          0
+      device:        0
+      type:          "dvddrive"
+      medium:        "./bootimage-auto.iso"
+  {{- end }}
+    - controller:    "SATA1"
+      port:          0
+      device:        0
+      type:          "hdd"
+      medium:        "{{ $name }}-0.vdi"
+      nonrotational: true
+      discard:       true
+    - controller:    "SATA1"
+      port:          1
+      device:        0
+      type:          "hdd"
+      medium:        "{{ $name }}-1.vdi"
+      nonrotational: true
+      discard:       true
+  nics:
+    - mode:     "natnetwork"
+      network:  "{{ $lab.NatNet }}"
+      type:     "82540em"
+      bootprio: 2
+    - mode:     "intnet"
+      network:  "{{ $lab.IntNetPrefix }}-management"
+      type:     "82540em"
+      promisc:  "allow-all"
+      bootprio: 1
+    - mode:     "intnet"
+      network:  "{{ $lab.IntNetPrefix }}-data1"
+      type:     "virtio"
+      promisc:  "allow-all"
+    - mode:     "intnet"
+      network:  "{{ $lab.IntNetPrefix }}-data2"
+      type:     "virtio"
+      promisc:  "allow-all"
+{{- end }}
