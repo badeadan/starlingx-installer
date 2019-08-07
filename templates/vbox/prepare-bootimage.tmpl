@@ -32,6 +32,9 @@ prepare_bootimage() {
     prepare_ansible smallsystem_ks.cfg || die
     fix_ldap_dev_random_wait ks.cfg || die
     fix_ldap_dev_random_wait smallsystem_ks.cfg || die
+    speedup_drbd_sync ks.cfg || die
+    speedup_drbd_sync smallsystem_ks.cfg || die
+    speedup_drbd_sync controller_ks.cfg || die
     mkisofs -R -D -A 'oe_iso_boot' -V 'oe_iso_boot' \
             -quiet \
             -b isolinux.bin \
@@ -50,6 +53,8 @@ prepare_bootimage() {
 
 isolinux_boot_override() {
 {{- if eq $lab.SystemMode "simplex" }}
+    sed -i 's#ui vesamenu.c32#default 2#' isolinux.cfg
+{{- else if eq $lab.SystemMode "duplex" }}
     sed -i 's#ui vesamenu.c32#default 2#' isolinux.cfg
 {{- else }}
     sed -i 's#ui vesamenu.c32#default 0#' isolinux.cfg
@@ -164,4 +169,14 @@ EOF
 %end
 OUTER_EOF
 }
+
+speedup_drbd_sync() {
+    local ks_file=$1
+    cat <<'EOF' >>${ks_file}
+%post --erroronfail
+sed -i 's/cram-hmac-alg sha1;/a    csums-alg crc32c;' /usr/share/puppet/modules/drbd/templates/header.res.erb
+%end
+EOF
+}
+
 {{- end }}
