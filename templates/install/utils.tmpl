@@ -156,4 +156,25 @@ EOF
     set -$oldopt
 }
 
+wait_until_ceph_mon_status() {
+    local oldopt=$- ; set +x
+    local host=$1
+    local timeout_min=$2
+    local target=$3
+    local deadline=$((${SECONDS} + ${timeout_min} * 60))
+    local prev
+    while true; do
+        [[ "${SECONDS}" -lt "${deadline}" ]] || die
+        status=$(ssh -F ./ssh.config ${ACTIVE_CONTROLLER} bash <<'EOF' | awk "\$6==\"${host}\"{print \$8}"
+set -e
+source /etc/platform/openrc
+system ceph-mon-list
+EOF
+              )
+        [[ "${status}" != "${prev}" ]] && prev="${status}" && echo "host=${host} ceph mon status=${status}"
+        [[ "${status}" =~ ${target} ]] && break
+        sleep 10
+    done
+    set -$oldopt
+}
 {{- end }}
