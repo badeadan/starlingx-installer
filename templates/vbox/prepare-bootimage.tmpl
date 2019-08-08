@@ -174,7 +174,7 @@ speedup_drbd_sync() {
     local ks_file=$1
     cat <<'EOF' >>${ks_file}
 %post --erroronfail
-sed -i 's/cram-hmac-alg sha1;/a    csums-alg crc32c;' /usr/share/puppet/modules/drbd/templates/header.res.erb
+sed -i '/cram-hmac-alg sha1;/a    csums-alg crc32c;' /usr/share/puppet/modules/drbd/templates/header.res.erb
 %end
 EOF
 }
