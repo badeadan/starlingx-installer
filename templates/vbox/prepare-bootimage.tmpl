@@ -18,23 +18,21 @@ prepare_bootimage() {
     chmod -R +w ${TMP_PATCH_ISO_DIR}
     pushd ${TMP_PATCH_ISO_DIR}
     isolinux_boot_override || die
-    setup_custom_environment ks.cfg || die
-    setup_custom_environment smallsystem_ks.cfg || die
-    setup_custom_environment controller_ks.cfg || die
-    setup_user_access ks.cfg || die
-    setup_user_access smallsystem_ks.cfg || die
-    setup_oam_interface ks.cfg || die
-    setup_oam_interface smallsystem_ks.cfg || die
-    setup_known_hosts ks.cfg || die
-    setup_known_hosts smallsystem_ks.cfg || die
-    setup_known_hosts controller_ks.cfg || die
-    prepare_ansible ks.cfg || die
-    prepare_ansible smallsystem_ks.cfg || die
-    fix_ldap_dev_random_wait ks.cfg || die
-    fix_ldap_dev_random_wait smallsystem_ks.cfg || die
-    speedup_drbd_sync ks.cfg || die
-    speedup_drbd_sync smallsystem_ks.cfg || die
-    speedup_drbd_sync controller_ks.cfg || die
+    for ks in ks.cfg controller_ks.cfg smallsystem_ks.cfg; do
+        setup_oam_interface ${ks} || die
+        prepare_ansible ${ks} || die
+        fix_ldap_dev_random_wait ${ks} || die
+        speedup_drbd_sync ${ks} || die
+    done
+    for ks in net_controller_ks.cfg net_smallsystem_ks.cfg; do
+        speedup_drbd_sync ${ks} || die
+    done
+    for ks in ks.cfg controller_ks.cfg smallsystem_ks.cfg \
+              net_controller_ks.cfg net_smallsystem_ks.cfg net_storage_ks.cfg net_worker_ks.cfg; do
+        setup_custom_environment ${ks} || die
+        setup_user_access ${ks} || die
+        setup_known_hosts ${ks} || die
+    done
     mkisofs -R -D -A 'oe_iso_boot' -V 'oe_iso_boot' \
             -quiet \
             -b isolinux.bin \
@@ -85,7 +83,7 @@ OUTER_EOF
 
 setup_custom_environment() {
     local ks_file=$1
-    cat <<OUTER_EOF >>${ks_file}
+    cat <<'OUTER_EOF' >>${ks_file}
 %post --erroronfail
 # side effect:  remove TMOUT
 cat <<'EOF' >/etc/profile.d/custom.sh
