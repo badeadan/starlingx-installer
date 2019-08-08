@@ -54,7 +54,7 @@ func (tw *TarWriter) WriteFileBytes(name string, mode int64, buffer *bytes.Buffe
 func main() {
 	sl := StorageLab{SystemMode: "standard"}
 	flag.StringVar(&sl.Name, "name", "storage", "group name")
-	flag.StringVar(&sl.NatNet, "nat-net", "nat1", "nat network name")
+	flag.StringVar(&sl.NatNet, "nat-net", "nat5", "nat network name")
 	flag.StringVar(&sl.LoopBackPrefix, "loopback-prefix", "127.0.5", "nat loopback prefix")
 	flag.StringVar(&sl.Oam.Network, "oam-network", "10.10.10.0/24", "oam network address")
 	flag.StringVar(&sl.Oam.Gateway, "oam-gateway", "10.10.10.1", "oam gateway")
