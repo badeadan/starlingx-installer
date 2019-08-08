@@ -3,6 +3,7 @@
 setup_ssh() {
     cat <<EOF >ssh.config
 LogLevel ERROR
+
 Host controller-0
   User sysadmin
   StrictHostKeyChecking no
@@ -16,9 +17,9 @@ Host controller-0-*
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@{{ $lab.LoopBackPrefix }}.3 -p 2222 nc $(echo %h | sed -s "s/controller-0-//") 22
+  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null sysadmin@{{ $lab.LoopBackPrefix }}.3 -p 2222 -W $(echo %h | sed -s "s/controller-0-//"):22
 
-{{- if ne $lab.SystemMode "simplex" }}
+{{ if ne $lab.SystemMode "simplex" -}}
 Host controller-1
   User sysadmin
   StrictHostKeyChecking no
@@ -32,7 +33,7 @@ Host controller-1-*
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@{{ $lab.LoopBackPrefix }}.4 -p 2222 nc $(echo %h | sed -s "s/controller-1-//") 22
+  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@{{ $lab.LoopBackPrefix }}.4 -p 2222 -W $(echo %h | sed -s "s/controller-1-//"):22
 {{- end }}
 EOF
 }
