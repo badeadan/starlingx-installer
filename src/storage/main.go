@@ -95,7 +95,8 @@ func main() {
 			return mask, err
 		},
 	})
-	t = template.Must(lab.DiscoverTemplates(t))
+	t = template.Must(lab.DiscoverTemplates("./templates/vbox", t))
+	t = template.Must(lab.DiscoverTemplates("./templates/install", t))
 	tw := &TarWriter{tar.NewWriter(os.Stdout)}
 
 	vbox := lab.Lab{}

@@ -8,8 +8,8 @@ import (
 	"text/template"
 )
 
-func DiscoverTemplates(t *template.Template) (*template.Template, error) {
-	root := filepath.Clean("./templates")
+func DiscoverTemplates(root string, t *template.Template) (*template.Template, error) {
+	root = filepath.Clean(root)
 	prefix := len(root) + 1
 	err := filepath.Walk(root, func(path string, info os.FileInfo, e1 error) error {
 		if !info.IsDir() && strings.HasSuffix(path, ".tmpl") {
