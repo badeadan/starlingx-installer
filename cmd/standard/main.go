@@ -6,8 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Masterminds/sprig"
+	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
 	"gopkg.in/yaml.v2"
-	"lab"
 	"log"
 	"net"
 	"os"
@@ -15,12 +15,12 @@ import (
 )
 
 type StandardLab struct {
-	Name           string
-	SystemMode     string
-	NatNet         string
-	LoopBackPrefix string
-	IntNetPrefix   string
-	Oam            lab.OamInfo
+	Name               string
+	SystemMode         string
+	NatNet             string
+	LoopBackPrefix     string
+	IntNetPrefix       string
+	Oam                lab.OamInfo
 	ControllerCpus     uint
 	ControllerMemory   uint
 	ControllerDiskSize uint
