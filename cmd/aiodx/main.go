@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/Masterminds/sprig"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
+	"github.com/gobuffalo/packr/v2"
 	"gopkg.in/yaml.v2"
 	"log"
 	"net"
@@ -77,8 +78,10 @@ func main() {
 			return mask, err
 		},
 	})
-	t = template.Must(lab.DiscoverTemplates("./templates/vbox", t))
-	t = template.Must(lab.DiscoverTemplates("./templates/install", t))
+	box := packr.New("VboxTemplates", "./templates/vbox")
+	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
+	box = packr.New("VboxTemplates", "./templates/install")
+	t = template.Must(lab.DiscoverTemplates(box, "install", t))
 	tw := &TarWriter{tar.NewWriter(os.Stdout)}
 
 	vbox := lab.Lab{}
