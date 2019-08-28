@@ -80,7 +80,7 @@ func main() {
 	})
 	box := packr.New("VboxTemplates", "./templates/vbox")
 	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
-	box = packr.New("VboxTemplates", "./templates/install")
+	box = packr.New("InstallTemplates", "./templates/install")
 	t = template.Must(lab.DiscoverTemplates(box, "install", t))
 	tw := &TarWriter{tar.NewWriter(os.Stdout)}
 
