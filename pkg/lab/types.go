@@ -60,9 +60,70 @@ type OamInfo struct {
 }
 
 type Lab struct {
-	Type              string
-	Group             string
-	BasePath          string
-	Vms               []Vm
-	Networks          []Network
+	Type     string
+	Group    string
+	BasePath string
+	Vms      []Vm
+	Networks []Network
+}
+
+type AioSxLab struct {
+	Name           string
+	SystemMode     string
+	NatNet         string
+	LoopBackPrefix string
+	IntNetPrefix   string
+	Oam            OamInfo
+	Cpus           uint
+	Memory         uint
+	DiskSize       uint
+}
+
+type AioDxLab struct {
+	Name           string
+	SystemMode     string
+	NatNet         string
+	LoopBackPrefix string
+	IntNetPrefix   string
+	Oam            OamInfo
+	Cpus           uint
+	Memory         uint
+	DiskSize       uint
+}
+
+type StandardLab struct {
+	Name               string
+	SystemMode         string
+	NatNet             string
+	LoopBackPrefix     string
+	IntNetPrefix       string
+	Oam                OamInfo
+	ControllerCpus     uint
+	ControllerMemory   uint
+	ControllerDiskSize uint
+	ComputeCount       uint
+	ComputeCpus        uint
+	ComputeMemory      uint
+	ComputeDiskSize    uint
+}
+
+type StorageLab struct {
+	Name               string
+	SystemMode         string
+	NatNet             string
+	LoopBackPrefix     string
+	IntNetPrefix       string
+	Oam                OamInfo
+	ControllerCpus     uint
+	ControllerMemory   uint
+	ControllerDiskSize uint
+	ComputeCount       uint
+	ComputeCpus        uint
+	ComputeMemory      uint
+	ComputeDiskSize    uint
+	StorageCount       uint
+	StorageCpus        uint
+	StorageMemory      uint
+	StorageDiskCount   uint
+	StorageDiskSize    uint
 }

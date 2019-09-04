@@ -1,0 +1,39 @@
+<html>
+<head>
+  <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-grey-lighter">
+  <div class="max-w-xl mx-auto">
+    <ul class="flex justify-center border-b w-full">
+	{{- $colors := dict "AioSX" "bg-blue" "AioDX" "bg-purple" "Standard" "bg-teal" "Storage" "bg-pink" }}
+	{{- $active := "bg-white inline-block border-l border-t border-r rounded-t py-2 px-4 font-semibold" }}
+	{{- $inactive := "bg-white inline-block py-2 px-4 text-gray-600 hover:text-black font-semibold" }}
+      <li class="-mb-px mr-1">
+        <a class="{{ if eq .Type "AioSX" }}{{$active}} {{index $colors .Type}}-100{{else}}{{$inactive}}{{end}}" href="aiosx">AioSX</a>
+      </li>
+      <li class="mr-1">
+        <a class="{{ if eq .Type "AioDX" }}{{$active}} {{index $colors .Type}}-100{{else}}{{$inactive}}{{end}}" href="aiodx">AioDX</a>
+      </li>
+      <li class="mr-1">
+        <a class="{{ if eq .Type "Standard" }}{{$active}} {{index $colors .Type}}-100{{else}}{{$inactive}}{{end}}" href="standard">Standard</a>
+      </li>
+      <li class="mr-1">
+        <a class="{{ if eq .Type "Storage" }}{{$active}} {{index $colors .Type}}-100{{else}}{{$inactive}}{{end}}" href="storage">Storage</a>
+      </li>
+    </ul>
+    <form class="{{index $colors .Type}}-100 shadow-md rounded px-8 pt-6 pb-8 mb-4" action="/{{lower .Type}}" method="post">
+      <div class="flex flex-wrap -mx-3">
+        {{- inputs_and_errors_for .Form .Errors}}
+      </div>
+      <div class="flex items-center justify-center">
+        <button class="{{index $colors .Type}}-500 hover:{{index $colors .Type}}-700 text-white font-bold py-2 px-4 rounded" type="submit">
+          Generate {{.Type}} Installer
+        </button>
+      </div>
+      </form>
+      <p class="text-center text-grey text-xs">
+        2019 StarlingX VirtualBox Installer
+      </p>
+    </div>
+</body>
+</html>

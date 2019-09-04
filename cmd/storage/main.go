@@ -4,37 +4,10 @@ import (
 	"archive/tar"
 	"bytes"
 	"flag"
-	"fmt"
-	"github.com/Masterminds/sprig"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
-	"github.com/gobuffalo/packr/v2"
-	"gopkg.in/yaml.v2"
 	"log"
-	"net"
 	"os"
-	"text/template"
 )
-
-type StorageLab struct {
-	Name               string
-	SystemMode         string
-	NatNet             string
-	LoopBackPrefix     string
-	IntNetPrefix       string
-	Oam                lab.OamInfo
-	ControllerCpus     uint
-	ControllerMemory   uint
-	ControllerDiskSize uint
-	ComputeCount       uint
-	ComputeCpus        uint
-	ComputeMemory      uint
-	ComputeDiskSize    uint
-	StorageCount       uint
-	StorageCpus        uint
-	StorageMemory      uint
-	StorageDiskCount   uint
-	StorageDiskSize    uint
-}
 
 type TarWriter struct {
 	*tar.Writer
@@ -53,7 +26,7 @@ func (tw *TarWriter) WriteFileBytes(name string, mode int64, buffer *bytes.Buffe
 }
 
 func main() {
-	sl := StorageLab{SystemMode: "standard"}
+	sl := lab.StorageLab{SystemMode: "standard"}
 	flag.StringVar(&sl.Name, "name", "storage", "group name")
 	flag.StringVar(&sl.NatNet, "nat-net", "nat5", "nat network name")
 	flag.StringVar(&sl.LoopBackPrefix, "loopback-prefix", "127.0.5", "nat loopback prefix")
@@ -77,79 +50,7 @@ func main() {
 	flag.UintVar(&sl.StorageDiskSize, "sorage-disk", 520, "sorage disk size")
 
 	flag.Parse()
-
-	t := template.New("")
-	t = t.Funcs(sprig.TxtFuncMap())
-	t = t.Funcs(template.FuncMap{
-		"include": func(name string, data interface{}) (string, error) {
-			buf := &bytes.Buffer{}
-			err := t.ExecuteTemplate(buf, name, data)
-			return buf.String(), err
-		},
-		"NetCidrMask": func(cidr string) (string, error) {
-			_, n, err := net.ParseCIDR(cidr)
-			mask := ""
-			if err == nil {
-				mask = fmt.Sprintf("%d.%d.%d.%d",
-					n.Mask[0], n.Mask[1], n.Mask[2], n.Mask[3])
-			}
-			return mask, err
-		},
-	})
-	box := packr.New("VboxTemplates", "./templates/vbox")
-	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
-	box = packr.New("InstallTemplates", "./templates/install")
-	t = template.Must(lab.DiscoverTemplates(box, "install", t))
-	tw := &TarWriter{tar.NewWriter(os.Stdout)}
-
-	vbox := lab.Lab{}
-	buf := &bytes.Buffer{}
-	err := t.ExecuteTemplate(buf, "vbox/lab/storage", sl)
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = yaml.Unmarshal(buf.Bytes(), &vbox)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "vbox/setup", vbox)
-	if err != nil {
-		log.Fatal(err)
-	}
-	tw.WriteFileBytes(
-		fmt.Sprintf("%s/vbox-setup.sh", sl.Name),
-		0700, buf)
-
-	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "vbox/prepare-bootimage", sl)
-	if err != nil {
-		log.Fatal(err)
-	}
-	tw.WriteFileBytes(
-		fmt.Sprintf("%s/prepare-bootimage.sh", sl.Name),
-		0700, buf)
-
-	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "install/lab/storage", sl)
-	if err != nil {
-		log.Fatal(err)
-	}
-	tw.WriteFileBytes(
-		fmt.Sprintf("%s/install.sh", sl.Name),
-		0700, buf)
-
-	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "vbox/vmctl", vbox)
-	if err != nil {
-		log.Fatal(err)
-	}
-	tw.WriteFileBytes(
-		fmt.Sprintf("%s/vmctl.sh", sl.Name),
-		0700, buf)
-
-	err = tw.Close()
+	err := lab.MakeStorageInstaller(sl, os.Stdout)
 	if err != nil {
 		log.Fatal(err)
 	}
