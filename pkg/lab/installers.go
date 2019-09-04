@@ -103,6 +103,15 @@ func MakeAioSxInstaller(sx AioSxLab, out io.Writer) error {
 		fmt.Sprintf("%s/vmctl.sh", sx.Name),
 		0700, buf)
 
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "install/readme", sx)
+	if err != nil {
+		return err
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/README.txt", sx.Name),
+		0700, buf)
+
 	return tw.Close()
 }
 
@@ -176,6 +185,15 @@ func MakeAioDxInstaller(dx AioDxLab, out io.Writer) error {
 	}
 	tw.WriteFileBytes(
 		fmt.Sprintf("%s/vmctl.sh", dx.Name),
+		0700, buf)
+
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "install/readme", dx)
+	if err != nil {
+		return err
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/README.txt", dx.Name),
 		0700, buf)
 
 	return tw.Close()
@@ -253,6 +271,15 @@ func MakeStandardInstaller(sl StandardLab, out io.Writer) error {
 		fmt.Sprintf("%s/vmctl.sh", sl.Name),
 		0700, buf)
 
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "install/readme", sl)
+	if err != nil {
+		return err
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/README.txt", sl.Name),
+		0700, buf)
+
 	return tw.Close()
 }
 
@@ -327,6 +354,15 @@ func MakeStorageInstaller(sl StorageLab, out io.Writer) error {
 	}
 	tw.WriteFileBytes(
 		fmt.Sprintf("%s/vmctl.sh", sl.Name),
+		0700, buf)
+
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "install/readme", sl)
+	if err != nil {
+		return err
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/README.txt", sl.Name),
 		0700, buf)
 
 	return tw.Close()
