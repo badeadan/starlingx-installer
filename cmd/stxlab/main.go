@@ -490,6 +490,11 @@ func main() {
 	flag.UintVar(&port, "port", 3000, "port to listen for HTTP connections")
 	flag.Parse()
 
+	// force packr template discovery
+	_ = packr.New("VboxTemplates", "./templates/vbox")
+	_ = packr.New("InstallTemplates", "./templates/install")
+	_ = packr.New("WebTemplates", "./templates/web")
+
 	http.HandleFunc("/", redirect2AioSx)
 	http.HandleFunc("/aiosx", handleAioSx)
 	http.HandleFunc("/aiodx", handleAioDx)
