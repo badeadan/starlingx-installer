@@ -13,7 +13,7 @@ prepare_bootimage() {
     fuseiso -p "${iso}" ${TMP_ORIG_ISO_DIR}
     rsync -ra ${TMP_ORIG_ISO_DIR}/ ${TMP_PATCH_ISO_DIR}
     fusermount -u ${TMP_ORIG_ISO_DIR}
-    OUT_ISO_PATH=$(realpath ./bootimage-auto.iso)
+    OUT_ISO_PATH=$(readlink -f ./bootimage-auto.iso)
     rmdir ${TMP_ORIG_ISO_DIR}
     chmod -R +w ${TMP_PATCH_ISO_DIR}
     pushd ${TMP_PATCH_ISO_DIR}

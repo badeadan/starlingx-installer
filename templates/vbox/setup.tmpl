@@ -89,7 +89,7 @@ setup_vbox() {
               --register \
               --name "{{ $vmName }}" \
               --ostype Other_64 \
-              --basefolder $(realpath "{{ $lab.BasePath }}") \
+              --basefolder $(readlink -f "{{ $lab.BasePath }}") \
               --groups "/{{ $.Group }}"
     run vboxmanage modifyvm "{{ $vmName }}" \
               --cpus "{{ $vm.Cpus }}" \
@@ -101,7 +101,7 @@ setup_vbox() {
         {{- end }}
       {{- end }}
               --uart1 0x3F8 4 \
-              --uartmode1 server $(realpath "{{ $lab.BasePath }}/{{ $vmName }}-serial") \
+              --uartmode1 server $(readlink -f "{{ $lab.BasePath }}/{{ $vmName }}-serial") \
               --acpi on \
               --ioapic on
       {{- range $i, $ctrl := $vm.StorageControllers }}
@@ -162,7 +162,7 @@ setup_environment() {
     cat >env.sh <<EOF
 {{- range $_, $vm := .Vms }}
   {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
-alias {{ $vmName }}-serial="socat stdio,raw,echo=0,icanon=0,escape=0x11 $(realpath '{{ $lab.BasePath }}/{{ $vmName }}-serial')"
+alias {{ $vmName }}-serial="socat stdio,raw,echo=0,icanon=0,escape=0x11 $(readlink -f '{{ $lab.BasePath }}/{{ $vmName }}-serial')"
 {{- end }}
 EOF
 }
