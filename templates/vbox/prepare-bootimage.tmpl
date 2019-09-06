@@ -70,6 +70,7 @@ setup_user_access() {
 cat <<EOF >>/etc/sudoers
 sysadmin ALL=(ALL) NOPASSWD: ALL
 EOF
+sed -i "/\b\(PermitRootLogin\|AllowAgentForwarding\|AllowTcpForwarding\|TCPKeepAlive\|PermitTunnel\)\b/d" /etc/ssh/sshd_config
 cat <<EOF >>/etc/ssh/sshd_config
 PermitRootLogin yes
 AllowAgentForwarding yes
