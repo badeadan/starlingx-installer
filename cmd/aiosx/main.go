@@ -20,6 +20,7 @@ func main() {
 	flag.UintVar(&sx.Cpus, "cpus", _default.Cpus, "controller cpu count")
 	flag.UintVar(&sx.Memory, "memory", _default.Memory, "controller ram size")
 	flag.UintVar(&sx.DiskSize, "disk-size", _default.DiskSize, "controller disk size")
+	flag.UintVar(&sx.DiskCount, "disk-count", _default.DiskCount, "number of extra controller disks")
 
 	flag.Parse()
 	err := lab.MakeAioSxInstaller(sx, os.Stdout)

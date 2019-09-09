@@ -11,8 +11,10 @@
   disks:
     - medium: "{{ $name }}-0.vdi"
       size:   {{ $lab.ComputeDiskSize }}
-    - medium: "{{ $name }}-1.vdi"
+  {{- range $i := $lab.ComputeDiskCount | add1 | int | until }}
+    - medium: "{{ $name }}-{{ $i }}.vdi"
       size:   {{ $lab.ComputeDiskSize }}
+  {{- end }}
   storagecontrollers:
     - name:        "SATA1"
       type:        "sata"
@@ -21,13 +23,15 @@
       hostiocache: true
       bootable:    true
   storageattachments:
+  {{- range $i :=  $lab.ComputeDiskCount | add1 | int | until}}
     - controller:    "SATA1"
-      port:          0
+      port:          {{ $i }}
       device:        0
       type:          "hdd"
-      medium:        "{{ $name }}-0.vdi"
+      medium:        "{{ $name }}-{{ $i }}.vdi"
       nonrotational: true
       discard:       true
+  {{- end }}
   nics:
     - mode:     "intnet"
       network:  "{{ $lab.IntNetPrefix }}-unused"

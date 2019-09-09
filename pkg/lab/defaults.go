@@ -20,6 +20,7 @@ func DefaultAioSxLab() AioSxLab {
 		Oam: DefaultOamInfo(),
 		Cpus: 8,
 		Memory: 24,
+		DiskCount: 2,
 		DiskSize: 520,
 	}
 }
@@ -34,6 +35,7 @@ func DefaultAioDxLab() AioDxLab {
 		Oam: DefaultOamInfo(),
 		Cpus: 8,
 		Memory: 24,
+		DiskCount: 2,
 		DiskSize: 520,
 	}
 }
@@ -48,10 +50,12 @@ func DefaultStandardLab() StandardLab {
 		Oam: DefaultOamInfo(),
 		ControllerCpus: 4,
 		ControllerMemory: 16,
+		ControllerDiskCount: 2,
 		ControllerDiskSize: 520,
 		ComputeCount: 2,
 		ComputeCpus: 4,
 		ComputeMemory: 10,
+		ComputeDiskCount: 2,
 		ComputeDiskSize: 520,
 	}
 }
@@ -66,10 +70,12 @@ func DefaultStorageLab() StorageLab {
 		Oam: DefaultOamInfo(),
 		ControllerCpus: 4,
 		ControllerMemory: 16,
+		ControllerDiskCount: 2,
 		ControllerDiskSize: 520,
 		ComputeCount: 2,
 		ComputeCpus: 4,
 		ComputeMemory: 10,
+		ComputeDiskCount: 2,
 		ComputeDiskSize: 520,
 		StorageCount: 2,
 		StorageCpus: 2,

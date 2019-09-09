@@ -32,6 +32,7 @@ type AioSxForm struct {
 	Cpus           uint   `form:"label=Number of CPUs"`
 	Memory         uint   `form:"label=Memory size (GB)"`
 	DiskSize       uint   `form:"label=Disk size (GB)"`
+	DiskCount      uint   `form:"label=Number of extra controller disks"`
 }
 
 func AioSxForm2Lab(form AioSxForm) lab.AioSxLab {
@@ -45,9 +46,10 @@ func AioSxForm2Lab(form AioSxForm) lab.AioSxLab {
 			Gateway:   form.Gateway,
 			FloatAddr: form.FloatAddr,
 		},
-		Cpus:     form.Cpus,
-		Memory:   form.Memory,
-		DiskSize: form.DiskSize,
+		Cpus:      form.Cpus,
+		Memory:    form.Memory,
+		DiskSize:  form.DiskSize,
+		DiskCount: form.DiskCount,
 	}
 }
 
@@ -63,6 +65,7 @@ func AioSxLab2Form(l lab.AioSxLab) AioSxForm {
 		Cpus:           l.Cpus,
 		Memory:         l.Memory,
 		DiskSize:       l.DiskSize,
+		DiskCount:      l.DiskCount,
 	}
 }
 
@@ -135,6 +138,7 @@ type AioDxForm struct {
 	Cpus           uint   `form:"label=Number of CPUs"`
 	Memory         uint   `form:"label=Memory size (GB)"`
 	DiskSize       uint   `form:"label=Disk size (GB)"`
+	DiskCount      uint   `form:"label=Number of extra controller disks"`
 }
 
 func AioDxForm2Lab(form AioDxForm) lab.AioDxLab {
@@ -150,9 +154,10 @@ func AioDxForm2Lab(form AioDxForm) lab.AioDxLab {
 			Controller0: form.Controller0,
 			Controller1: form.Controller1,
 		},
-		Cpus:     form.Cpus,
-		Memory:   form.Memory,
-		DiskSize: form.DiskSize,
+		Cpus:      form.Cpus,
+		Memory:    form.Memory,
+		DiskSize:  form.DiskSize,
+		DiskCount: form.DiskCount,
 	}
 }
 
@@ -170,6 +175,7 @@ func AioDxLab2Form(l lab.AioDxLab) AioDxForm {
 		Cpus:           l.Cpus,
 		Memory:         l.Memory,
 		DiskSize:       l.DiskSize,
+		DiskCount:      l.DiskCount,
 	}
 }
 
@@ -231,22 +237,24 @@ func handleAioDx(w http.ResponseWriter, r *http.Request) {
 }
 
 type StandardForm struct {
-	Name               string `form:"label=Lab Name"`
-	NatNet             string `form:"label=NAT Network"`
-	LoopBackPrefix     string `form:"label=Loopback Prefix"`
-	IntNetPrefix       string `form:"label=Internal Network Prefix"`
-	Network            string `form:"label=OAM Network prefix & mask"`
-	Gateway            string `form:"label=OAM Gateway"`
-	FloatAddr          string `form:"label=OAM Floating IP address"`
-	Controller0        string `form:"label=OAM Controller-0 IP address"`
-	Controller1        string `form:"label=OAM Controller-1 IP address"`
-	ControllerCpus     uint   `form:"label=Controller Number of CPUs"`
-	ControllerMemory   uint   `form:"label=Controller Memory size (GB)"`
-	ControllerDiskSize uint   `form:"label=Controller Disk size (GB)"`
-	ComputeCount       uint   `form:"label=Number of Computes"`
-	ComputeCpus        uint   `form:"label=Compute Number of CPUs"`
-	ComputeMemory      uint   `form:"label=Compute Memory size (GB)"`
-	ComputeDiskSize    uint   `form:"label=Compute Disk size (GB)"`
+	Name                string `form:"label=Lab Name"`
+	NatNet              string `form:"label=NAT Network"`
+	LoopBackPrefix      string `form:"label=Loopback Prefix"`
+	IntNetPrefix        string `form:"label=Internal Network Prefix"`
+	Network             string `form:"label=OAM Network prefix & mask"`
+	Gateway             string `form:"label=OAM Gateway"`
+	FloatAddr           string `form:"label=OAM Floating IP address"`
+	Controller0         string `form:"label=OAM Controller-0 IP address"`
+	Controller1         string `form:"label=OAM Controller-1 IP address"`
+	ControllerCpus      uint   `form:"label=Controller Number of CPUs"`
+	ControllerMemory    uint   `form:"label=Controller Memory size (GB)"`
+	ControllerDiskSize  uint   `form:"label=Controller Disk size (GB)"`
+	ControllerDiskCount uint   `form:"label=Number of extra controller disks"`
+	ComputeCount        uint   `form:"label=Number of Computes"`
+	ComputeCpus         uint   `form:"label=Compute Number of CPUs"`
+	ComputeMemory       uint   `form:"label=Compute Memory size (GB)"`
+	ComputeDiskSize     uint   `form:"label=Compute Disk size (GB)"`
+	ComputeDiskCount    uint   `form:"label=Number of extra compute disks"`
 }
 
 func StandardForm2Lab(form StandardForm) lab.StandardLab {
@@ -262,34 +270,38 @@ func StandardForm2Lab(form StandardForm) lab.StandardLab {
 			Controller0: form.Controller0,
 			Controller1: form.Controller1,
 		},
-		ControllerCpus:     form.ControllerCpus,
-		ControllerMemory:   form.ControllerMemory,
-		ControllerDiskSize: form.ControllerDiskSize,
-		ComputeCount:       form.ComputeCount,
-		ComputeCpus:        form.ComputeCpus,
-		ComputeMemory:      form.ComputeMemory,
-		ComputeDiskSize:    form.ComputeDiskSize,
+		ControllerCpus:      form.ControllerCpus,
+		ControllerMemory:    form.ControllerMemory,
+		ControllerDiskSize:  form.ControllerDiskSize,
+		ControllerDiskCount: form.ControllerDiskCount,
+		ComputeCount:        form.ComputeCount,
+		ComputeCpus:         form.ComputeCpus,
+		ComputeMemory:       form.ComputeMemory,
+		ComputeDiskSize:     form.ComputeDiskSize,
+		ComputeDiskCount:    form.ComputeDiskCount,
 	}
 }
 
 func StandardLab2Form(l lab.StandardLab) StandardForm {
 	return StandardForm{
-		Name:               l.Name,
-		NatNet:             l.NatNet,
-		LoopBackPrefix:     l.LoopBackPrefix,
-		IntNetPrefix:       l.IntNetPrefix,
-		Network:            l.Oam.Network,
-		Gateway:            l.Oam.Gateway,
-		FloatAddr:          l.Oam.FloatAddr,
-		Controller0:        l.Oam.Controller0,
-		Controller1:        l.Oam.Controller1,
-		ControllerCpus:     l.ControllerCpus,
-		ControllerMemory:   l.ControllerMemory,
-		ControllerDiskSize: l.ControllerDiskSize,
-		ComputeCount:       l.ComputeCount,
-		ComputeCpus:        l.ComputeCpus,
-		ComputeMemory:      l.ComputeMemory,
-		ComputeDiskSize:    l.ComputeDiskSize,
+		Name:                l.Name,
+		NatNet:              l.NatNet,
+		LoopBackPrefix:      l.LoopBackPrefix,
+		IntNetPrefix:        l.IntNetPrefix,
+		Network:             l.Oam.Network,
+		Gateway:             l.Oam.Gateway,
+		FloatAddr:           l.Oam.FloatAddr,
+		Controller0:         l.Oam.Controller0,
+		Controller1:         l.Oam.Controller1,
+		ControllerCpus:      l.ControllerCpus,
+		ControllerMemory:    l.ControllerMemory,
+		ControllerDiskSize:  l.ControllerDiskSize,
+		ControllerDiskCount: l.ControllerDiskCount,
+		ComputeCount:        l.ComputeCount,
+		ComputeCpus:         l.ComputeCpus,
+		ComputeMemory:       l.ComputeMemory,
+		ComputeDiskSize:     l.ComputeDiskSize,
+		ComputeDiskCount:    l.ComputeDiskCount,
 	}
 }
 
@@ -351,27 +363,29 @@ func handleStandard(w http.ResponseWriter, r *http.Request) {
 }
 
 type StorageForm struct {
-	Name               string `form:"label=Lab Name"`
-	NatNet             string `form:"label=NAT Network"`
-	LoopBackPrefix     string `form:"label=Loopback Prefix"`
-	IntNetPrefix       string `form:"label=Internal Network Prefix"`
-	Network            string `form:"label=OAM Network prefix & mask"`
-	Gateway            string `form:"label=OAM Gateway"`
-	FloatAddr          string `form:"label=OAM Floating IP address"`
-	Controller0        string `form:"label=OAM Controller-0 IP address"`
-	Controller1        string `form:"label=OAM Controller-1 IP address"`
-	ControllerCpus     uint   `form:"label=Controller Number of CPUs"`
-	ControllerMemory   uint   `form:"label=Controller Memory size (GB)"`
-	ControllerDiskSize uint   `form:"label=Controller Disk size (GB)"`
-	ComputeCount       uint   `form:"label=Number of Compute nodes"`
-	ComputeCpus        uint   `form:"label=Compute Number of CPUs"`
-	ComputeMemory      uint   `form:"label=Compute Memory size (GB)"`
-	ComputeDiskSize    uint   `form:"label=Compute Disk size (GB)"`
-	StorageCount       uint   `form:"label=Number of Storage nodes"`
-	StorageCpus        uint   `form:"label=Storage Number of CPUs"`
-	StorageMemory      uint   `form:"label=Storage Memory size (GB)"`
-	StorageDiskCount   uint   `form:"label=Storage Number of OSDs"`
-	StorageDiskSize    uint   `form:"label=Storage Disk size (GB)"`
+	Name                string `form:"label=Lab Name"`
+	NatNet              string `form:"label=NAT Network"`
+	LoopBackPrefix      string `form:"label=Loopback Prefix"`
+	IntNetPrefix        string `form:"label=Internal Network Prefix"`
+	Network             string `form:"label=OAM Network prefix & mask"`
+	Gateway             string `form:"label=OAM Gateway"`
+	FloatAddr           string `form:"label=OAM Floating IP address"`
+	Controller0         string `form:"label=OAM Controller-0 IP address"`
+	Controller1         string `form:"label=OAM Controller-1 IP address"`
+	ControllerCpus      uint   `form:"label=Controller Number of CPUs"`
+	ControllerMemory    uint   `form:"label=Controller Memory size (GB)"`
+	ControllerDiskSize  uint   `form:"label=Controller Disk size (GB)"`
+	ControllerDiskCount uint   `form:"label=Number of extra controller disks"`
+	ComputeCount        uint   `form:"label=Number of Compute nodes"`
+	ComputeCpus         uint   `form:"label=Compute Number of CPUs"`
+	ComputeMemory       uint   `form:"label=Compute Memory size (GB)"`
+	ComputeDiskSize     uint   `form:"label=Compute Disk size (GB)"`
+	ComputeDiskCount    uint   `form:"label=Number of extra compute disks"`
+	StorageCount        uint   `form:"label=Number of Storage nodes"`
+	StorageCpus         uint   `form:"label=Storage Number of CPUs"`
+	StorageMemory       uint   `form:"label=Storage Memory size (GB)"`
+	StorageDiskSize     uint   `form:"label=Storage Disk size (GB)"`
+	StorageDiskCount    uint   `form:"label=Number of storage disks (OSDs) per host"`
 }
 
 func StorageForm2Lab(form StorageForm) lab.StorageLab {
@@ -390,15 +404,17 @@ func StorageForm2Lab(form StorageForm) lab.StorageLab {
 		ControllerCpus:     form.ControllerCpus,
 		ControllerMemory:   form.ControllerMemory,
 		ControllerDiskSize: form.ControllerDiskSize,
+		ControllerDiskCount: form.ControllerDiskCount,
 		ComputeCount:       form.ComputeCount,
 		ComputeCpus:        form.ComputeCpus,
 		ComputeMemory:      form.ComputeMemory,
 		ComputeDiskSize:    form.ComputeDiskSize,
+		ComputeDiskCount:    form.ComputeDiskCount,
 		StorageCount:       form.StorageCount,
 		StorageCpus:        form.StorageCpus,
 		StorageMemory:      form.StorageMemory,
-		StorageDiskCount:   form.StorageDiskCount,
 		StorageDiskSize:    form.StorageDiskSize,
+		StorageDiskCount:    form.StorageDiskCount,
 	}
 }
 
@@ -416,15 +432,17 @@ func StorageLab2Form(l lab.StorageLab) StorageForm {
 		ControllerCpus:     l.ControllerCpus,
 		ControllerMemory:   l.ControllerMemory,
 		ControllerDiskSize: l.ControllerDiskSize,
+		ControllerDiskCount: l.ControllerDiskCount,
 		ComputeCount:       l.ComputeCount,
 		ComputeCpus:        l.ComputeCpus,
 		ComputeMemory:      l.ComputeMemory,
 		ComputeDiskSize:    l.ComputeDiskSize,
+		ComputeDiskCount:    l.ComputeDiskCount,
 		StorageCount:       l.StorageCount,
 		StorageCpus:        l.StorageCpus,
 		StorageMemory:      l.StorageMemory,
-		StorageDiskCount:   l.StorageDiskCount,
 		StorageDiskSize:    l.StorageDiskSize,
+		StorageDiskCount:   l.StorageDiskCount,
 	}
 }
 

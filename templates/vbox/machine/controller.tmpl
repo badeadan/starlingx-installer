@@ -16,8 +16,10 @@
   disks:
     - medium: "{{ $name }}-0.vdi"
       size:   {{ $lab.ControllerDiskSize }}
-    - medium: "{{ $name }}-1.vdi"
+  {{- range $i := $lab.ControllerDiskCount | add1 | int | until }}
+    - medium: "{{ $name }}-{{ $i }}.vdi"
       size:   {{ $lab.ControllerDiskSize }}
+  {{- end }}
   storagecontrollers:
   {{- if eq $id 0 }}
     - name:        "IDE1"
@@ -40,20 +42,15 @@
       type:          "dvddrive"
       medium:        "./bootimage-auto.iso"
    {{- end }}
+  {{- range $i :=  $lab.ControllerDiskCount | add1 | int | until}}
     - controller:    "SATA1"
-      port:          0
+      port:          {{ $i }}
       device:        0
       type:          "hdd"
-      medium:        "{{ $name }}-0.vdi"
+      medium:        "{{ $name }}-{{ $i }}.vdi"
       nonrotational: true
       discard:       true
-    - controller:    "SATA1"
-      port:          1
-      device:        0
-      type:          "hdd"
-      medium:        "{{ $name }}-1.vdi"
-      nonrotational: true
-      discard:       true
+  {{- end }}
   nics:
     - mode:     "natnetwork"
       network:  "{{ $lab.NatNet }}"

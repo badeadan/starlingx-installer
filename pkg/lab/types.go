@@ -77,6 +77,7 @@ type AioSxLab struct {
 	Cpus           uint
 	Memory         uint
 	DiskSize       uint
+	DiskCount      uint
 }
 
 type AioDxLab struct {
@@ -89,41 +90,46 @@ type AioDxLab struct {
 	Cpus           uint
 	Memory         uint
 	DiskSize       uint
+	DiskCount      uint
 }
 
 type StandardLab struct {
-	Name               string
-	SystemMode         string
-	NatNet             string
-	LoopBackPrefix     string
-	IntNetPrefix       string
-	Oam                OamInfo
-	ControllerCpus     uint
-	ControllerMemory   uint
-	ControllerDiskSize uint
-	ComputeCount       uint
-	ComputeCpus        uint
-	ComputeMemory      uint
-	ComputeDiskSize    uint
+	Name                string
+	SystemMode          string
+	NatNet              string
+	LoopBackPrefix      string
+	IntNetPrefix        string
+	Oam                 OamInfo
+	ControllerCpus      uint
+	ControllerMemory    uint
+	ControllerDiskSize  uint
+	ControllerDiskCount uint
+	ComputeCount        uint
+	ComputeCpus         uint
+	ComputeMemory       uint
+	ComputeDiskSize     uint
+	ComputeDiskCount    uint
 }
 
 type StorageLab struct {
-	Name               string
-	SystemMode         string
-	NatNet             string
-	LoopBackPrefix     string
-	IntNetPrefix       string
-	Oam                OamInfo
-	ControllerCpus     uint
-	ControllerMemory   uint
-	ControllerDiskSize uint
-	ComputeCount       uint
-	ComputeCpus        uint
-	ComputeMemory      uint
-	ComputeDiskSize    uint
-	StorageCount       uint
-	StorageCpus        uint
-	StorageMemory      uint
-	StorageDiskCount   uint
-	StorageDiskSize    uint
+	Name                string
+	SystemMode          string
+	NatNet              string
+	LoopBackPrefix      string
+	IntNetPrefix        string
+	Oam                 OamInfo
+	ControllerCpus      uint
+	ControllerMemory    uint
+	ControllerDiskSize  uint
+	ControllerDiskCount uint
+	ComputeCount        uint
+	ComputeCpus         uint
+	ComputeMemory       uint
+	ComputeDiskSize     uint
+	ComputeDiskCount    uint
+	StorageCount        uint
+	StorageCpus         uint
+	StorageMemory       uint
+	StorageDiskSize     uint
+	StorageDiskCount    uint
 }
