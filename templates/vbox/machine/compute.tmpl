@@ -9,8 +9,6 @@
     - disk
     - net
   disks:
-    - medium: "{{ $name }}-0.vdi"
-      size:   {{ $lab.ComputeDiskSize }}
   {{- range $i := $lab.ComputeDiskCount | add1 | int | until }}
     - medium: "{{ $name }}-{{ $i }}.vdi"
       size:   {{ $lab.ComputeDiskSize }}
