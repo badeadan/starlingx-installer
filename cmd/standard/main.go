@@ -26,7 +26,7 @@ func (tw *TarWriter) WriteFileBytes(name string, mode int64, buffer *bytes.Buffe
 }
 
 func main() {
-	sl := lab.StandardLab{SystemMode: "duplex"}
+	sl := lab.StandardLab{SystemMode: "standard"}
 	_default := lab.DefaultStandardLab()
 	flag.StringVar(&sl.Name, "name", _default.Name, "group name")
 	flag.StringVar(&sl.NatNet, "nat-net", _default.NatNet, "nat network name")
