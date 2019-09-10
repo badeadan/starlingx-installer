@@ -70,30 +70,6 @@ set -x
 system host-label-assign controller-0 openstack-control-plane=enabled
 EOF
 
-# configure controller-0 OSDs
-#
-ssh -F ./ssh.config controller-0 \
-    bash <<'EOF'
-source /etc/platform/openrc
-set -x
-HOST=controller-0
-DISKS=$(system host-disk-list ${HOST})
-TIERS=$(system storage-tier-list ceph_cluster)
-OSDs="/dev/sdb"
-for OSD in ${OSDs}; do
-  system host-stor-add ${HOST} $(echo "$DISKS" | grep "${OSD}" | awk '{print $2}') --tier-uuid $(echo "$TIERS" | grep storage | awk '{print $2}')
-  echo "wait OSD configured"
-  set +x
-  while true; do
-    system host-stor-list ${HOST} | grep ${OSD} | grep configuring
-    [[ $? -eq 0 ]] && break
-    sleep 1
-  done
-  set -x
-done
-EOF
-
-
 # unlock controller-0
 ssh -F ./ssh.config controller-0 \
     bash <<'EOF' || die
@@ -164,29 +140,7 @@ system interface-network-assign controller-1 oam0 oam
 system interface-network-assign controller-1 mgmt0 cluster-host
 EOF
 
-# configure controller-1 OSDs
-#
-ssh -F ./ssh.config controller-0 \
-    bash <<'EOF'
-source /etc/platform/openrc
-set -x
-HOST=controller-1
-DISKS=$(system host-disk-list ${HOST})
-TIERS=$(system storage-tier-list ceph_cluster)
-OSDs="/dev/sdb"
-for OSD in ${OSDs}; do
-  system host-stor-add ${HOST} $(echo "$DISKS" | grep "${OSD}" | awk '{print $2}') --tier-uuid $(echo "$TIERS" | grep storage | awk '{print $2}')
-  echo "wait OSD configured"
-  set +x
-  while true; do
-    system host-stor-list ${HOST} | grep ${OSD} | grep configuring
-    [[ $? -eq 0 ]] && break
-    sleep 1
-  done
-  set -x
-done
-EOF
-
+# unlock controller-1
 ssh -F ./ssh.config controller-0 \
     bash <<'EOF'
 source /etc/platform/openrc
@@ -195,13 +149,6 @@ system host-unlock controller-1
 EOF
 
 wait_host_status controller-1 $((REBOOT_TIMEOUT + DRBD_SYNC_TIMEOUT)) unlocked/enabled/available
-
-ssh -F ./ssh.config controller-0 \
-    bash <<'EOF'
-set -x
-ceph -s
-ceph osd tree
-EOF
 
 # provision computes
 #
@@ -285,6 +232,59 @@ EOF
 {{- range $i := until (int $lab.ComputeCount) }}
 wait_host_status compute-{{ $i }} $((REBOOT_TIMEOUT + 10)) unlocked/enabled/available
 {{- end }}
+
+# configure controller-0 OSDs
+#
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+set -x
+HOST=controller-0
+DISKS=$(system host-disk-list ${HOST})
+TIERS=$(system storage-tier-list ceph_cluster)
+OSDs="/dev/sdb"
+for OSD in ${OSDs}; do
+  system host-stor-add ${HOST} $(echo "$DISKS" | grep "${OSD}" | awk '{print $2}') --tier-uuid $(echo "$TIERS" | grep storage | awk '{print $2}')
+  echo "wait OSD configured"
+  set +x
+  while true; do
+    system host-stor-list ${HOST} | grep ${OSD} | grep configuring
+    [[ $? -eq 0 ]] && break
+    sleep 1
+  done
+  set -x
+done
+EOF
+
+# configure controller-1 OSDs
+#
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+source /etc/platform/openrc
+set -x
+HOST=controller-1
+DISKS=$(system host-disk-list ${HOST})
+TIERS=$(system storage-tier-list ceph_cluster)
+OSDs="/dev/sdb"
+for OSD in ${OSDs}; do
+  system host-stor-add ${HOST} $(echo "$DISKS" | grep "${OSD}" | awk '{print $2}') --tier-uuid $(echo "$TIERS" | grep storage | awk '{print $2}')
+  echo "wait OSD configured"
+  set +x
+  while true; do
+    system host-stor-list ${HOST} | grep ${OSD} | grep configuring
+    [[ $? -eq 0 ]] && break
+    sleep 1
+  done
+  set -x
+done
+EOF
+
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+set -x
+ceph -s
+ceph osd tree
+EOF
 
 wait_application_status platform-integ-apps ${APP_PLATFORM_INTEG_APPS_TIMEOUT} applied/completed "apply-failed/.*"
 
