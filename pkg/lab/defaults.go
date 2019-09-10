@@ -43,7 +43,7 @@ func DefaultAioDxLab() AioDxLab {
 func DefaultStandardLab() StandardLab {
 	return StandardLab{
 		Name: "standard",
-		SystemMode: "duplex",
+		SystemMode: "standard",
 		NatNet: "nat4",
 		LoopBackPrefix: "127.0.4",
 		IntNetPrefix: "intnet",
