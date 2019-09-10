@@ -259,6 +259,9 @@ echo ">>> ceph osd tree"
 ceph osd tree
 EOF
 
+# wait for platform-integ-apps to apply before unlocking controller-1
+wait_application_status platform-integ-apps ${APP_PLATFORM_INTEG_APPS_TIMEOUT} applied/completed "apply-failed/.*"
+
 # unlock controller-1
 #
 ssh -F ./ssh.config controller-0 \
