@@ -1,15 +1,5 @@
 package lab
 
-func DefaultOamInfo() OamInfo {
-	return OamInfo{
-		Network: "10.10.10.0/24",
-		Gateway: "10.10.10.1",
-		FloatAddr: "10.10.10.2",
-		Controller0: "10.10.10.3",
-		Controller1: "10.10.10.4",
-	}
-}
-
 func DefaultAioSxLab() AioSxLab {
 	return AioSxLab{
 		Name: "aiosx",
@@ -17,7 +7,13 @@ func DefaultAioSxLab() AioSxLab {
 		NatNet: "nat2",
 		LoopBackPrefix: "127.0.2",
 		IntNetPrefix: "intnet",
-		Oam: DefaultOamInfo(),
+		Oam: OamInfo{
+			Network: "10.10.12.0/24",
+			Gateway: "10.10.12.1",
+			FloatAddr: "10.10.12.2",
+			Controller0: "10.10.12.3",
+			Controller1: "10.10.12.4",
+		},
 		Cpus: 8,
 		Memory: 24,
 		DiskCount: 2,
@@ -32,7 +28,13 @@ func DefaultAioDxLab() AioDxLab {
 		NatNet: "nat3",
 		LoopBackPrefix: "127.0.3",
 		IntNetPrefix: "intnet",
-		Oam: DefaultOamInfo(),
+		Oam: OamInfo{
+			Network: "10.10.13.0/24",
+			Gateway: "10.10.13.1",
+			FloatAddr: "10.10.13.2",
+			Controller0: "10.10.13.3",
+			Controller1: "10.10.13.4",
+		},
 		Cpus: 8,
 		Memory: 24,
 		DiskCount: 2,
@@ -47,7 +49,13 @@ func DefaultStandardLab() StandardLab {
 		NatNet: "nat4",
 		LoopBackPrefix: "127.0.4",
 		IntNetPrefix: "intnet",
-		Oam: DefaultOamInfo(),
+		Oam: OamInfo{
+			Network: "10.10.14.0/24",
+			Gateway: "10.10.14.1",
+			FloatAddr: "10.10.14.2",
+			Controller0: "10.10.14.3",
+			Controller1: "10.10.14.4",
+		},
 		ControllerCpus: 4,
 		ControllerMemory: 16,
 		ControllerDiskCount: 2,
@@ -67,7 +75,13 @@ func DefaultStorageLab() StorageLab {
 		NatNet: "nat5",
 		LoopBackPrefix: "127.0.5",
 		IntNetPrefix: "intnet",
-		Oam: DefaultOamInfo(),
+		Oam: OamInfo{
+			Network: "10.10.15.0/24",
+			Gateway: "10.10.15.1",
+			FloatAddr: "10.10.15.2",
+			Controller0: "10.10.15.3",
+			Controller1: "10.10.15.4",
+		},
 		ControllerCpus: 4,
 		ControllerMemory: 16,
 		ControllerDiskCount: 2,
