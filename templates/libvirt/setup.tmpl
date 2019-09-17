@@ -50,7 +50,7 @@ setup_libvirt() {
       <port start='1024' end='65535'/>
     </nat>
   </forward>
-  <ip address='10.10.10.1' netmask='255.255.255.0'>
+  <ip address='{{ $net.Gateway }}' netmask='{{ $net.Address | NetCidrMask }}'>
   </ip>
       {{- end }}
   <bridge name='{{ $net.Name }}' stp='on' delay='0'/>
@@ -74,7 +74,7 @@ EOF
       {{- end }}
     {{- end }}
     virsh define /dev/stdin <<EOF
-{{- dict "Lab" $lab "Vm" $vm | include "libvirt/machine/machine" }}
+{{- dict "Lab" $lab "Vm" $vm | include "libvirt/machine/setup" }}
 EOF
     {{- end }}
 }

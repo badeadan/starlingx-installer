@@ -4,36 +4,53 @@ setup_ssh() {
     cat <<'EOF' >ssh.config
 LogLevel ERROR
 
+{{- $host0 := "" }}
+{{- $host1 := "" }}
+{{- $port := "" }}
+{{- if $lab.LoopBackPrefix }}
+  {{- $host0 = printf "%s.3" $lab.LoopBackPrefix }}
+  {{- $host1 = printf "%s.4" $lab.LoopBackPrefix }}
+  {{- $port = 2222 }}
+{{- else }}
+  {{- $host0 = $lab.Oam.FloatAddr }}
+  {{- $port = 22 }}
+  {{- if $lab.Oam.Controller0 }}
+    {{- $host0 = $lab.Oam.Controller0 }}
+    {{- $host1 = $lab.Oam.Controller1 }}
+  {{- end }}
+{{- end }}
+
 Host controller-0
   User sysadmin
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   GlobalKnownHostsFile /dev/null
-  Hostname {{ $lab.LoopBackPrefix}}.3
-  Port 2222
+  Hostname {{ $host0 }}
+  Port {{ $port }}
 
 Host controller-0-*
   User sysadmin
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null sysadmin@{{ $lab.LoopBackPrefix }}.3 -p 2222 -W $(H=%h; echo ${H/controller-0-/}):22
+  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null sysadmin@{{ $host0 }} -p {{ $port }} -W $(H=%h; echo ${H/controller-0-/}):22
 
-{{ if ne $lab.SystemMode "simplex" -}}
+{{- if ne $lab.SystemMode "simplex" -}}
+
 Host controller-1
   User sysadmin
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   GlobalKnownHostsFile /dev/null
-  Hostname {{ $lab.LoopBackPrefix }}.4
-  Port 2222
+  Hostname {{ $host1 }}
+  Port {{ $port }}
 
 Host controller-1-*
   User sysadmin
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
   GlobalKnownHostsFile /dev/null
-  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@{{ $lab.LoopBackPrefix }}.4 -p 2222 -W $(H=%h; echo ${H/controller-1-/}):22
+  ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=no -o GlobalKnownHostsFile=no sysadmin@{{ $host1 }} -p 2222 -W $(H=%h; echo ${H/controller-1-/}):22
 {{- end }}
 EOF
 }

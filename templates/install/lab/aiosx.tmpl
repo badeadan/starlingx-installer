@@ -1,6 +1,7 @@
 {{- define "install/lab/aiosx" -}}
   {{- $lab := . -}}
 #!/usr/bin/env bash
+HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
 
 INSTALL_TIMEOUT=${INSTALL_TIMEOUT:-40}
 REBOOT_TIMEOUT=${REBOOT_TIMEOUT:-30}
@@ -21,7 +22,7 @@ setup_ssh
 
 # boot controller-0
 #
-vboxmanage startvm {{ printf "%s-controller-0" $lab.Name }} --type headless || die
+${HERE}/vmctl.sh start controller-0 || die
 wait_ssh_up controller-0 ${INSTALL_TIMEOUT}
 wait_systemd_multi_user_target controller-0 ${REBOOT_TIMEOUT}
 
@@ -43,7 +44,9 @@ echo "# configure OAM interface"
 ssh -F ./ssh.config controller-0 \
     bash <<'EOF' || die
 source /etc/platform/openrc
-OAM_IF=enp0s3
+for OAM_IF in enp0s3 enp7s1; do
+    [[ -e /sys/class/net/${OAM_IF} ]] && break
+done
 set -x
 system host-if-modify controller-0 $OAM_IF -c platform
 system interface-network-assign controller-0 $OAM_IF oam

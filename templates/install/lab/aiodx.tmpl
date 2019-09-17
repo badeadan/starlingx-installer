@@ -51,6 +51,7 @@ done
 for MGMT_IF in enp0s8 enp7s2; do
     [[ -e /sys/class/net/${MGMT_IF} ]] && break
 done
+set -x
 system host-if-modify controller-0 lo -c none
 IFNET_UUIDS=$(system interface-network-list controller-0 | awk '{if ($6 =="lo") print $4;}')
 for UUID in $IFNET_UUIDS; do

@@ -103,9 +103,9 @@ OUTER_EOF
 
 setup_oam_interface() {
     local ks_file=$1
-    cat <<OUTER_EOF >>${ks_file}
+    cat <<'OUTER_EOF' >>${ks_file}
 %post --erroronfail
-# confiure OAM interface in VBox or LibVirt
+# configure OAM interface in VBox or LibVirt
 for DEVICE in enp0s3 enp7s1; do
     [[ -e ${DEVICE} ]] && break
 done

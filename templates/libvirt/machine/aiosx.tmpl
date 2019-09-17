@@ -1,0 +1,35 @@
+{{- define "libvirt/machine/aiosx" }}
+  {{- $lab := .Lab }}
+  {{- $id := .Id }}
+  {{- $name := printf "%s-controller-%d" $lab.Name .Id -}}
+- name:   "{{ $name }}"
+  cpus:   {{ $lab.Cpus }}
+  memory: {{ $lab.Memory }}
+  serial: "{{ printf "${HERE}/%s-serial" $name }}"
+  disks:
+    - device: "cdrom"
+      source: "${HERE}/bootimage-auto.iso"
+      bus: "sata"
+      dev: "{{ 'a' | int | add $lab.DiskCount | add 1 | printf "sd%c" }}"
+      bootorder: 2
+  {{- range $i := $lab.DiskCount | add1 | int | until }}
+    - device: "disk"
+      source: "{{ printf "${HERE}/%s-disk-%d.img" $name $i }}"
+      size: {{ $lab.DiskSize }}
+      bus: "sata"
+      dev: "{{ 'a' | int | add $i | printf "sd%c" }}"
+      {{- if eq $i 0 }}
+      bootorder: 1
+      {{- end }}
+  {{- end }}
+  nics:
+    - name: "oam"
+      bridge: "{{ printf "%s-oam" $lab.Name }}"
+      model: "e1000"
+    - name: "data1"
+      bridge: "{{ printf "%s-data1" $lab.Name }}"
+      model: "virtio"
+    - name: "data2"
+      bridge: "{{ printf "%s-data2" $lab.Name }}"
+      model: "virtio"
+{{- end }}
