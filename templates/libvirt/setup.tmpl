@@ -1,0 +1,140 @@
+{{- define "libvirt/setup" -}}
+  {{- $lab := . -}}
+#!/usr/bin/env bash
+ISO_PATH=
+
+HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
+TOOL_DEPENDENCIES=""
+
+source ./prepare-bootimage.sh
+
+cleanup() {
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+    virsh destroy "{{ $vm.Name }}" >/dev/null 2>&1
+    virsh undefine "{{ $vm.Name }}" >/dev/null 2>&1
+      {{- range $i, $disk := $vm.Disks }}
+    virsh vol-delete "{{ $disk.Source }}" >/dev/null 2>&1
+      {{- end }}
+    {{- end }}
+    {{- range $i, $net := $lab.Networks }}
+    virth net-destroy "{{ $net.Name }}" >/dev/null 2>&1
+    virth net-undefine "{{ $net.Name }}" >/dev/null 2>&1
+    {{- end }}
+    # rm -rf "{{ $lab.BasePath }}"
+}
+
+run() {
+    "$@"
+    if [[ $? -ne 0 ]]; then
+        echo "ERR: '$@' failed. Return code: $?"
+        cleanup
+        exit 1
+    fi
+}
+
+setup_libvirt() {
+    # setup networks
+    #
+    {{- range $i, $net := $lab.Networks }}
+    if virsh net-uuid "{{ $net.Name }}" >/dev/null 2>&1 ; then
+       virsh net-destroy "{{ $net.Name }}"
+       virsh net-undefine "{{ $net.Name }}"
+    fi
+    virsh net-define /dev/stdin <<'EOF'
+<network>
+  <name>{{ $net.Name }}</name>
+      {{- if eq $net.Mode "nat" }}
+  <forward mode='nat'>
+    <nat>
+      <port start='1024' end='65535'/>
+    </nat>
+  </forward>
+  <ip address='10.10.10.1' netmask='255.255.255.0'>
+  </ip>
+      {{- end }}
+  <bridge name='{{ $net.Name }}' stp='on' delay='0'/>
+</network>
+EOF
+    {{- end }}
+    {{- range .Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+
+    # setup {{ $vm.Name }}
+    #
+    if virsh domuuid "{{ $vm.Name }}" >/dev/null 2>&1 ; then
+        virsh destroy "{{ $vm.Name }}"
+        virsh undefine "{{ $vm.Name }}"
+    fi
+    {{- range $disk := $vm.Disks }}
+      {{- if eq $disk.Device "disk" }}
+    rm -f {{ $disk.Source }}
+    qemu-img create -f qcow2 {{ $disk.Source }} {{ printf "%dG" $disk.Size }}
+      {{- end }}
+    {{- end }}
+    virsh define /dev/stdin <<EOF
+{{- dict "Lab" $lab "Vm" $vm | include "libvirt/machine/machine" }}
+EOF
+    {{- end }}
+}
+
+check_dependencies() {
+    for tool in ${TOOL_DEPENDENCIES}; do
+        if [[ -z "$(which ${tool})" ]]; then
+            cat >&2 <<EOF
+ERROR! Setup requires '${tool}'. Use your package manager
+ERROR! to install it then restart setup script.
+EOF
+            exit 1
+        fi
+    done
+}
+
+setup_environment() {
+    cat >env.sh <<EOF
+{{- range $_, $vm := .Vms }}
+alias {{ $vm.Name }}-serial="socat stdio,raw,echo=0,icanon=0,escape=0x11 $(readlink -f '{{ $lab.BasePath }}/{{ $vm.Name }}-serial')"
+{{- end }}
+EOF
+}
+
+main() {
+    set -x
+    if ! id -nG "$USER" | grep -qw "libvirt"; then
+        cat >&2 <<EOF
+ERROR! Setup requires user '${USER}' to be in 'libvirt' group.
+ERROR! Add it to that group and restart setup script. Example:
+ERROR!   sudo usermod -a -G libvirt $USER
+EOF
+        exit 1
+    fi
+    if ! systemctl is-active --quiet libvirtd.service; then 
+        cat >&2 <<EOF
+ERROR! libvirtd service is not running.
+EOF
+        exit 1
+    fi
+    if ! id -nG "$USER" | grep -qw "kvm"; then
+        cat >&2 <<EOF
+ERROR! Setup requires user '${USER}' to be in 'kvm' group.
+ERROR! Add it to that group and restart setup script. Example:
+ERROR!   sudo usermod -a -G kvm $USER
+EOF
+        exit 1
+    fi
+    check_dependencies
+    if [[ -n "${ISO_PATH}" ]]; then
+        prepare_bootimage ${ISO_PATH}
+    fi
+    setup_libvirt
+    setup_environment
+    echo "\nDONE!"
+}
+
+ISO_PATH=$1
+if [[ -z "${ISO_PATH}" ]]; then
+    echo 'WARNING! missing iso path. Will use existing bootimage-auto.iso (if present)' >&2
+fi
+main
+{{- end }}

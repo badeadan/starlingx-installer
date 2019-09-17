@@ -133,3 +133,43 @@ type StorageLab struct {
 	StorageDiskSize     uint
 	StorageDiskCount    uint
 }
+
+type LibvirtNetwork struct {
+	Name    string
+	Mode    string
+	Address string
+	Gateway string
+}
+
+type LibvirtDisk struct {
+	Device    string
+	Source    string
+	Size      uint
+	Dev       string
+	Bus       string
+	BootOrder uint
+}
+
+type LibvirtNic struct {
+	Name      string
+	Bridge    string
+	Model     string
+	BootOrder uint
+}
+
+type LibvirtVm struct {
+	Name   string
+	Cpus   uint
+	Memory uint
+	Serial string
+	Disks  []LibvirtDisk
+	Nics   []LibvirtNic
+}
+
+type LibvirtLab struct {
+	Type     string
+	Name     string
+	BasePath string
+	Vms      []LibvirtVm
+	Networks []LibvirtNetwork
+}

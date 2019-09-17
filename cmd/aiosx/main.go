@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
+	"github.com/badeadan/starlingx-vbox-installer/pkg/lab/installers"
 	"log"
 	"os"
 )
@@ -23,7 +24,7 @@ func main() {
 	flag.UintVar(&sx.DiskCount, "disk-count", _default.DiskCount, "number of extra controller disks")
 
 	flag.Parse()
-	err := lab.MakeAioSxInstaller(sx, os.Stdout)
+	err := installers.MakeAioSxInstaller(sx, os.Stdout)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,0 +1,43 @@
+{{- define "libvirt/machine/aiodx" }}
+  {{- $lab := .Lab }}
+  {{- $id := .Id }}
+  {{- $name := printf "%s-controller-%d" $lab.Name .Id -}}
+- name:   "{{ $name }}"
+  cpus:   {{ $lab.Cpus }}
+  memory: {{ $lab.Memory }}
+  serial: "{{ printf "${HERE}/%s-serial" $name }}"
+  disks:
+  {{- if eq $id 0 }}
+    - device: "cdrom"
+      source: "${HERE}/bootimage-auto.iso"
+      bus: "sata"
+      dev: "{{ 'a' | int | add $lab.DiskCount | add 1 | printf "sd%c" }}"
+      bootorder: 2
+  {{- end }}
+  {{- range $i := $lab.DiskCount | add1 | int | until }}
+    - device: "disk"
+      source: "{{ printf "${HERE}/%s-disk-%d.img" $name $i }}"
+      size: {{ $lab.DiskSize }}
+      bus: "sata"
+      dev: "{{ 'a' | int | add $i | printf "sd%c" }}"
+      {{- if eq $i 0 }}
+      bootorder: 1
+      {{- end }}
+  {{- end }}
+  nics:
+    - name: "oam"
+      bridge: "{{ printf "%s-oam" $lab.Name }}"
+      model: "e1000"
+      {{- if ne $id 0 }}
+      bootorder: 2
+      {{- end }}
+    - name: "mgmt"
+      bridge: "{{ printf "%s-mgmt" $lab.Name }}"
+      model: "e1000"
+    - name: "data1"
+      bridge: "{{ printf "%s-data1" $lab.Name }}"
+      model: "virtio"
+    - name: "data2"
+      bridge: "{{ printf "%s-data2" $lab.Name }}"
+      model: "virtio"
+{{- end }}

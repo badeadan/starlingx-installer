@@ -1,37 +1,19 @@
-package lab
+package installers
 
 import (
 	"archive/tar"
 	"bytes"
 	"fmt"
 	"github.com/Masterminds/sprig"
+	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
 	"github.com/gobuffalo/packr/v2"
 	"gopkg.in/yaml.v2"
 	"io"
 	"net"
 	"text/template"
-	"time"
 )
 
-type TarWriter struct {
-	*tar.Writer
-}
-
-func (tw *TarWriter) WriteFileBytes(name string, mode int64, buffer *bytes.Buffer) error {
-	modtime := time.Now()
-	err := tw.WriteHeader(&tar.Header{
-		Name:    name,
-		Mode:    mode,
-		Size:    int64(buffer.Len()),
-		ModTime: modtime,
-	})
-	if err == nil {
-		_, err = tw.Write(buffer.Bytes())
-	}
-	return err
-}
-
-func MakeAioSxInstaller(sx AioSxLab, out io.Writer) error {
+func MakeAioSxInstaller(sx lab.AioSxLab, out io.Writer) error {
 	t := template.New("")
 	t = t.Funcs(sprig.TxtFuncMap())
 	t = t.Funcs(template.FuncMap{
@@ -51,12 +33,12 @@ func MakeAioSxInstaller(sx AioSxLab, out io.Writer) error {
 		},
 	})
 	box := packr.New("VboxTemplates", "./templates/vbox")
-	t = template.Must(DiscoverTemplates(box, "vbox", t))
+	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
 	box = packr.New("InstallTemplates", "./templates/install")
-	t = template.Must(DiscoverTemplates(box, "install", t))
+	t = template.Must(lab.DiscoverTemplates(box, "install", t))
 	tw := &TarWriter{tar.NewWriter(out)}
 
-	vbox := Lab{}
+	vbox := lab.Lab{}
 	buf := &bytes.Buffer{}
 	err := t.ExecuteTemplate(buf, "vbox/lab/aiosx", sx)
 	if err != nil {
@@ -77,7 +59,7 @@ func MakeAioSxInstaller(sx AioSxLab, out io.Writer) error {
 		0700, buf)
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "vbox/prepare-bootimage", sx)
+	err = t.ExecuteTemplate(buf, "install/prepare-bootimage", sx)
 	if err != nil {
 		return err
 	}
@@ -115,7 +97,7 @@ func MakeAioSxInstaller(sx AioSxLab, out io.Writer) error {
 	return tw.Close()
 }
 
-func MakeAioDxInstaller(dx AioDxLab, out io.Writer) error {
+func MakeAioDxInstaller(dx lab.AioDxLab, out io.Writer) error {
 	t := template.New("")
 	t = t.Funcs(sprig.TxtFuncMap())
 	t = t.Funcs(template.FuncMap{
@@ -135,12 +117,12 @@ func MakeAioDxInstaller(dx AioDxLab, out io.Writer) error {
 		},
 	})
 	box := packr.New("VboxTemplates", "./templates/vbox")
-	t = template.Must(DiscoverTemplates(box, "vbox", t))
+	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
 	box = packr.New("InstallTemplates", "./templates/install")
-	t = template.Must(DiscoverTemplates(box, "install", t))
+	t = template.Must(lab.DiscoverTemplates(box, "install", t))
 	tw := &TarWriter{tar.NewWriter(out)}
 
-	vbox := Lab{}
+	vbox := lab.Lab{}
 	buf := &bytes.Buffer{}
 	err := t.ExecuteTemplate(buf, "vbox/lab/aiodx", dx)
 	if err != nil {
@@ -161,7 +143,7 @@ func MakeAioDxInstaller(dx AioDxLab, out io.Writer) error {
 		0700, buf)
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "vbox/prepare-bootimage", dx)
+	err = t.ExecuteTemplate(buf, "install/prepare-bootimage", dx)
 	if err != nil {
 		return err
 	}
@@ -199,7 +181,7 @@ func MakeAioDxInstaller(dx AioDxLab, out io.Writer) error {
 	return tw.Close()
 }
 
-func MakeStandardInstaller(sl StandardLab, out io.Writer) error {
+func MakeStandardInstaller(sl lab.StandardLab, out io.Writer) error {
 	t := template.New("")
 	t = t.Funcs(sprig.TxtFuncMap())
 	t = t.Funcs(template.FuncMap{
@@ -219,12 +201,12 @@ func MakeStandardInstaller(sl StandardLab, out io.Writer) error {
 		},
 	})
 	box := packr.New("VboxTemplates", "./templates/vbox")
-	t = template.Must(DiscoverTemplates(box, "vbox", t))
+	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
 	box = packr.New("InstallTemplates", "./templates/install")
-	t = template.Must(DiscoverTemplates(box, "install", t))
+	t = template.Must(lab.DiscoverTemplates(box, "install", t))
 	tw := &TarWriter{tar.NewWriter(out)}
 
-	vbox := Lab{}
+	vbox := lab.Lab{}
 	buf := &bytes.Buffer{}
 	err := t.ExecuteTemplate(buf, "vbox/lab/standard", sl)
 	if err != nil {
@@ -245,7 +227,7 @@ func MakeStandardInstaller(sl StandardLab, out io.Writer) error {
 		0700, buf)
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "vbox/prepare-bootimage", sl)
+	err = t.ExecuteTemplate(buf, "install/prepare-bootimage", sl)
 	if err != nil {
 		return err
 	}
@@ -283,7 +265,7 @@ func MakeStandardInstaller(sl StandardLab, out io.Writer) error {
 	return tw.Close()
 }
 
-func MakeStorageInstaller(sl StorageLab, out io.Writer) error {
+func MakeStorageInstaller(sl lab.StorageLab, out io.Writer) error {
 
 	t := template.New("")
 	t = t.Funcs(sprig.TxtFuncMap())
@@ -304,12 +286,12 @@ func MakeStorageInstaller(sl StorageLab, out io.Writer) error {
 		},
 	})
 	box := packr.New("VboxTemplates", "./templates/vbox")
-	t = template.Must(DiscoverTemplates(box, "vbox", t))
+	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
 	box = packr.New("InstallTemplates", "./templates/install")
-	t = template.Must(DiscoverTemplates(box, "install", t))
+	t = template.Must(lab.DiscoverTemplates(box, "install", t))
 	tw := &TarWriter{tar.NewWriter(out)}
 
-	vbox := Lab{}
+	vbox := lab.Lab{}
 	buf := &bytes.Buffer{}
 	err := t.ExecuteTemplate(buf, "vbox/lab/storage", sl)
 	if err != nil {
@@ -330,7 +312,7 @@ func MakeStorageInstaller(sl StorageLab, out io.Writer) error {
 		0700, buf)
 
 	buf = &bytes.Buffer{}
-	err = t.ExecuteTemplate(buf, "vbox/prepare-bootimage", sl)
+	err = t.ExecuteTemplate(buf, "install/prepare-bootimage", sl)
 	if err != nil {
 		return err
 	}

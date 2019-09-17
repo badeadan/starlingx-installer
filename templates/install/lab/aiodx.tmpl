@@ -1,6 +1,7 @@
 {{- define "install/lab/aiodx" -}}
   {{- $lab := . -}}
 #!/usr/bin/env bash
+HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
 
 INSTALL_TIMEOUT=${INSTALL_TIMEOUT:-40}
 REBOOT_TIMEOUT=${REBOOT_TIMEOUT:-30}
@@ -22,7 +23,7 @@ setup_ssh
 
 # boot controller-0
 #
-vboxmanage startvm {{ printf "%s-controller-0" $lab.Name }} --type headless || die
+${HERE}/vmctl.sh start controller-0 || die
 wait_ssh_up controller-0 ${INSTALL_TIMEOUT}
 wait_systemd_multi_user_target controller-0 ${REBOOT_TIMEOUT}
 
@@ -44,8 +45,12 @@ echo "# configure OAM interface"
 ssh -F ./ssh.config controller-0 \
     bash <<'EOF' || die
 source /etc/platform/openrc
-OAM_IF=enp0s3
-MGMT_IF=enp0s8
+for OAM_IF in enp0s3 enp7s1; do
+    [[ -e /sys/class/net/${OAM_IF} ]] && break
+done
+for MGMT_IF in enp0s8 enp7s2; do
+    [[ -e /sys/class/net/${MGMT_IF} ]] && break
+done
 system host-if-modify controller-0 lo -c none
 IFNET_UUIDS=$(system interface-network-list controller-0 | awk '{if ($6 =="lo") print $4;}')
 for UUID in $IFNET_UUIDS; do
@@ -150,7 +155,7 @@ wait_host_status controller-0 10 unlocked/enabled/available
 
 # install controller-1
 #
-vboxmanage startvm {{ printf "%s-controller-1" $lab.Name }} --type headless || die
+${HERE}/vmctl.sh start controller-1
 wait_until_host_id_assigned 2 5
 ssh -F ./ssh.config controller-0 \
     bash <<EOF
@@ -166,10 +171,12 @@ echo "# configure data interfaces"
 ssh -F ./ssh.config controller-0 \
     bash <<'EOF' || die
 source /etc/platform/openrc
+for OAM_IF in enp0s3 enp7s1; do
+    [[ -e /sys/class/net/${OAM_IF} ]] && break
+done
 export COMPUTE='controller-1' 
 PHYSNET0='physnet0' 
 PHYSNET1='physnet1' 
-OAM_IF=enp0s3
 DATA0IF=eth1000 
 DATA1IF=eth1001 
 NOWRAP="--nowrap"

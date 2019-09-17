@@ -3,11 +3,10 @@
 #!/usr/bin/env bash
 ISO_PATH=
 
-TOOL_DEPENDENCIES="vboxmanage"
-
 source ./prepare-bootimage.sh
 
 cleanup() {
+    # networks
     {{- range $lab.Vms }}
       {{- $vm := . }}
       {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}

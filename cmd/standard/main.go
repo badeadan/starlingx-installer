@@ -1,29 +1,12 @@
 package main
 
 import (
-	"archive/tar"
-	"bytes"
 	"flag"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
+	"github.com/badeadan/starlingx-vbox-installer/pkg/lab/installers"
 	"log"
 	"os"
 )
-
-type TarWriter struct {
-	*tar.Writer
-}
-
-func (tw *TarWriter) WriteFileBytes(name string, mode int64, buffer *bytes.Buffer) error {
-	err := tw.WriteHeader(&tar.Header{
-		Name: name,
-		Mode: mode,
-		Size: int64(buffer.Len()),
-	})
-	if err == nil {
-		_, err = tw.Write(buffer.Bytes())
-	}
-	return err
-}
 
 func main() {
 	sl := lab.StandardLab{SystemMode: "standard"}
@@ -48,7 +31,7 @@ func main() {
 	flag.UintVar(&sl.ComputeDiskCount, "compute-disk-count", _default.ComputeDiskCount, "number of extra compute disks")
 
 	flag.Parse()
-	err := lab.MakeStandardInstaller(sl, os.Stdout)
+	err := installers.MakeStandardInstaller(sl, os.Stdout)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -58,16 +58,24 @@ restore() {
         sleep 5
     done
     {{- end }}
-    resume
+}
+
+start() {
+    local name="$1"
+    vboxmanage startvm "{{ $lab.Name }}-${name}" --type headless
 }
 
 usage() {
-    echo <<EOF >&2
-Usage: vmctl [snapshot|restore] <snapshot-name>
+    cat <<EOF >&2
+Usage: vmctl.sh [snapshot|restore] <snapshot-name>
+       vmctl.sh start <node-name>
 EOF
 }
 
 case "$1" in
+start)
+    start "$2"
+    ;;
 snapshot)
     snapshot "$2"
     ;;

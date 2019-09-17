@@ -3,13 +3,16 @@ package main
 import (
 	"flag"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
+	"github.com/badeadan/starlingx-vbox-installer/pkg/lab/installers"
 	"log"
 	"os"
 )
 
 func main() {
 	dx := lab.AioDxLab{SystemMode: "duplex"}
+	var hypervisor string
 	_default := lab.DefaultAioDxLab()
+	flag.StringVar(&hypervisor, "hypervisor", "virtualbox", "hypervisor")
 	flag.StringVar(&dx.Name, "name", _default.Name, "group name")
 	flag.StringVar(&dx.NatNet, "nat-net", _default.NatNet, "nat network name")
 	flag.StringVar(&dx.LoopBackPrefix, "loop-prefix", _default.LoopBackPrefix, "nat loopback prefix")
@@ -25,8 +28,15 @@ func main() {
 	flag.UintVar(&dx.DiskCount, "disk-count", _default.DiskCount, "number of extra controller disks")
 
 	flag.Parse()
-	err := lab.MakeAioDxInstaller(dx, os.Stdout)
-	if err != nil {
-		log.Fatal(err)
+	if hypervisor == "libvirt" {
+		err := installers.MakeAioDxLibvirtInstaller(dx, os.Stdout)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		err := installers.MakeAioDxInstaller(dx, os.Stdout)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }

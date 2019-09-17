@@ -1,0 +1,69 @@
+{{- define "libvirt/vmctl" -}}
+  {{- $lab := . -}}
+#!/usr/bin/env bash
+
+pause() {
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+    virsh suspend "{{ $vm.Name }}"
+    {{- end }}
+}
+
+resume() {
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+    virsh resume "{{ $vm.Name }}"
+    {{- end }}
+}
+
+snapshot() {
+    local name="$1"
+    pause "$1"
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+    virsh snapshot-create-as "{{ $vm.Name }}" --name "${name}"
+    {{- end }}
+    resume "$1"
+}
+
+restore() {
+    local name="$1"
+    pause
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+    virsh snapshot-revert "{{ $vm.Name }}" --snapshotname "${name}" --paused
+    {{- end }}
+    sleep 3
+    resume
+}
+
+start() {
+    local name="$1"
+    {{- range $net := $lab.Networks }}
+    virsh net-start "{{ $net.Name }}" >/dev/null 2>&1
+    {{- end }}
+    virsh start "{{ $lab.Name }}-${name}"
+}
+
+usage() {
+    cat <<EOF >&2
+Usage: vmctl.sh [snapshot|restore] <snapshot-name>
+       vmctl.sh start <node-name>
+EOF
+}
+
+case "$1" in
+start)
+    start "$2"
+    ;;
+snapshot)
+    snapshot "$2"
+    ;;
+restore)
+    restore "$2"
+    ;;
+*)
+    usage
+    ;;
+esac
+{{- end }}

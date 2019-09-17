@@ -1,0 +1,27 @@
+{{- define "libvirt/lab/aiodx" }}
+{{- $lab := . }}
+name: "{{ $lab.Name }}"
+basepath: "."
+installiso: "bootimage-auto.iso"
+oam:
+  network: "{{ $lab.Oam.Network }}"
+  gateway: "{{ $lab.Oam.Gateway }}"
+  floataddr: "{{ $lab.Oam.FloatAddr }}"
+  controller0: "{{ $lab.Oam.Controller0 }}"
+  controller1: "{{ $lab.Oam.Controller1 }}"
+networks:
+  - name: "{{ $lab.Name }}-oam"
+    bridge: "{{ $lab.Name }}-oam"
+    mode: "nat"
+    address: "{{ $lab.Oam.Network }}"
+    gateway: "{{ $lab.Oam.Gateway }}"
+  - name: {{ $lab.Name }}-mgmt
+    bridge: "{{ $lab.Name }}-mgmt"
+  - name: {{ $lab.Name }}-data1
+    bridge: "{{ $lab.Name }}-data1"
+  - name: {{ $lab.Name }}-data2
+    bridge: "{{ $lab.Name }}-data2"
+vms:
+  {{- dict "Id" 0 "Lab" $lab | include "libvirt/machine/aiodx" | nindent 2 }}
+  {{- dict "Id" 1 "Lab" $lab | include "libvirt/machine/aiodx" | nindent 2 }}
+{{- end }}

@@ -1,4 +1,4 @@
-{{- define "vbox/prepare-bootimage" }}
+{{- define "install/prepare-bootimage" }}
   {{- $lab := . -}}
 TOOL_DEPENDENCIES+=" fuseiso rsync fusermount mkisofs"
 
@@ -105,8 +105,12 @@ setup_oam_interface() {
     local ks_file=$1
     cat <<OUTER_EOF >>${ks_file}
 %post --erroronfail
-cat <<EOF >/etc/sysconfig/network-scripts/ifcfg-enp0s3
-DEVICE=enp0s3
+# confiure OAM interface in VBox or LibVirt
+for DEVICE in enp0s3 enp7s1; do
+    [[ -e ${DEVICE} ]] && break
+done
+cat <<EOF >/etc/sysconfig/network-scripts/ifcfg-${DEVICE}
+DEVICE=${DEVICE}
 IPADDR={{ default $lab.Oam.FloatAddr $lab.Oam.Controller0 }}
 NETMASK={{ $lab.Oam.Network | NetCidrMask }}
 GATEWAY={{ $lab.Oam.Gateway }}

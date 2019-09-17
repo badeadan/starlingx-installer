@@ -1,0 +1,83 @@
+{{- define "libvirt/machine/machine" }}
+  {{- $lab := .Lab }}
+  {{- $vm := .Vm }}
+<domain type='kvm' id='164'>
+  <name>{{ $vm.Name }}</name>
+  <memory unit='GiB'>{{ $vm.Memory }}</memory>
+  <currentMemory unit='GiB'>{{ $vm.Memory }}</currentMemory>
+  <vcpu placement='static'>{{ $vm.Cpus }}</vcpu>
+  <resource>
+    <partition>/machine</partition>
+  </resource>
+  <os>
+    <type arch='x86_64' machine='pc-q35-xenial'>hvm</type>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <pae/>
+  </features>
+  <cpu match='exact'>
+    <model fallback='forbid'>Nehalem</model>
+    <topology sockets='1' cores='{{ $vm.Cpus }}' threads='1'/>
+    <feature policy='optional' name='vmx'/>
+    <feature policy='optional' name='svm'/>
+  </cpu>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    {{- range $disk := $vm.Disks }}
+    <disk type='file' device='{{ $disk.Device }}'>
+      {{- if eq $disk.Device "cdrom" }}
+      <driver name='qemu' type='raw'/>
+      {{- else }}
+      <driver name='qemu' type='qcow2' cache='unsafe'/>
+      {{- end }}
+      <source file='{{ $disk.Source }}'/>
+      <backingStore/>
+      <target dev='{{ $disk.Dev }}' bus='{{ $disk.Bus }}'/>
+      {{- if $disk.BootOrder }}
+      <boot order='{{ $disk.BootOrder }}'/>
+      {{- end }}
+    </disk>
+    {{- end }}
+    {{- range $i, $nic := $vm.Nics }}
+    <interface type='bridge'>
+      <source bridge='{{ $nic.Bridge }}'/>
+      <target dev='{{ printf "v%s%s" $lab.Name $nic.Name }}'/>
+      <model type='{{ $nic.Model }}'/>
+      <alias name='{{ $nic.Name }}'/>
+      {{- if $nic.BootOrder }}
+      <boot order='{{ $nic.BootOrder }}'/>
+      {{- end }}
+    </interface>
+    {{- end }}
+    <serial type='unix'>
+      <source mode='bind' path='{{ $vm.Serial }}'/>
+      <target type='isa-serial' port='0'>
+        <model name='isa-serial'/>
+      </target>
+    </serial>
+    <console type='unix'>
+      <source mode='bind' path='{{ $vm.Serial }}'/>
+      <target type='serial' port='0'/>
+    </console>
+    <input type='mouse' bus='ps2'/>
+    <input type='keyboard' bus='ps2'/>
+    <graphics type='vnc' port='5900' autoport='yes' listen='127.0.0.1' keymap='en-us'>
+      <listen type='address' address='127.0.0.1'/>
+    </graphics>
+    <video>
+      <model type='cirrus' vram='16384' heads='1'/>
+      <alias name='video0'/>
+    </video>
+    <memballoon model='virtio'>
+      <alias name='balloon0'/>
+    </memballoon>
+  </devices>
+  <seclabel type='dynamic' model='apparmor' relabel='yes'/>
+</domain>
+{{- end }}

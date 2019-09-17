@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/Masterminds/sprig"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
+	"github.com/badeadan/starlingx-vbox-installer/pkg/lab/installers"
 	"github.com/gobuffalo/packr/v2"
 	"github.com/gorilla/schema"
 	"github.com/joncalhoun/form"
@@ -113,7 +114,7 @@ func handleAioSx(w http.ResponseWriter, r *http.Request) {
 
 		modtime := time.Now()
 		var content bytes.Buffer
-		err = lab.MakeAioSxInstaller(
+		err = installers.MakeAioSxInstaller(
 			AioSxForm2Lab(form), io.Writer(&content))
 		const name = "stx-lab-aiosx.tar"
 		w.Header().Add("Content-Disposition",
@@ -223,7 +224,7 @@ func handleAioDx(w http.ResponseWriter, r *http.Request) {
 
 		modtime := time.Now()
 		var content bytes.Buffer
-		err = lab.MakeAioDxInstaller(
+		err = installers.MakeAioDxInstaller(
 			AioDxForm2Lab(form),
 			io.Writer(&content))
 		const name = "stx-lab-aiodx.tar"
@@ -349,7 +350,7 @@ func handleStandard(w http.ResponseWriter, r *http.Request) {
 
 		modtime := time.Now()
 		var content bytes.Buffer
-		err = lab.MakeStandardInstaller(
+		err = installers.MakeStandardInstaller(
 			StandardForm2Lab(form),
 			io.Writer(&content))
 		const name = "stx-lab-standard.tar"
@@ -490,7 +491,7 @@ func handleStorage(w http.ResponseWriter, r *http.Request) {
 
 		modtime := time.Now()
 		var content bytes.Buffer
-		err = lab.MakeStorageInstaller(
+		err = installers.MakeStorageInstaller(
 			StorageForm2Lab(form),
 			io.Writer(&content))
 		const name = "stx-lab-storage.tar"
