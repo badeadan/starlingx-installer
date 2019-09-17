@@ -17,7 +17,7 @@ Install steps:
 
 1. create VirtualBox VMs:
 
-     ./vbox-setup.sh /path/to/starlingx/iso
+     ./setup.sh /path/to/starlingx/iso
 
    This will remove already existing VMs named
    <setup-type>-controller-0, etc. and create a new set of
@@ -25,7 +25,7 @@ Install steps:
    <setup-type> (where setup-type can be aiosx, aiodx,
    standard, storage).
 
-   Then vbox-setup.sh calls prepare-bootimage.sh to patch
+   Then setup.sh calls prepare-bootimage.sh to patch
    the provided ISO image with the lab configuration and to
    make the automated install process independent of console
    access via serial port. The patched ISO goes through
@@ -61,7 +61,7 @@ the entire setup. It pauses all the VMs before taking a
 snapshot and restores them to a paused state then quickly
 resumes all of them to minimize clock skew between VMs.
 
-vbox-setup.sh creates an env.sh that can be sourced to
+setup.sh creates an env.sh that can be sourced to
 enable shell aliases for serial console access (they map to
 socat commands). For example:
 

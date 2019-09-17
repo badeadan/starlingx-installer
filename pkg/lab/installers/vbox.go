@@ -55,7 +55,7 @@ func MakeAioSxInstaller(sx lab.AioSxLab, out io.Writer) error {
 		return err
 	}
 	tw.WriteFileBytes(
-		fmt.Sprintf("%s/vbox-setup.sh", sx.Name),
+		fmt.Sprintf("%s/setup.sh", sx.Name),
 		0700, buf)
 
 	buf = &bytes.Buffer{}
@@ -139,7 +139,7 @@ func MakeAioDxInstaller(dx lab.AioDxLab, out io.Writer) error {
 		return err
 	}
 	tw.WriteFileBytes(
-		fmt.Sprintf("%s/vbox-setup.sh", dx.Name),
+		fmt.Sprintf("%s/setup.sh", dx.Name),
 		0700, buf)
 
 	buf = &bytes.Buffer{}
@@ -223,7 +223,7 @@ func MakeStandardInstaller(sl lab.StandardLab, out io.Writer) error {
 		return err
 	}
 	tw.WriteFileBytes(
-		fmt.Sprintf("%s/vbox-setup.sh", sl.Name),
+		fmt.Sprintf("%s/setup.sh", sl.Name),
 		0700, buf)
 
 	buf = &bytes.Buffer{}
@@ -308,7 +308,7 @@ func MakeStorageInstaller(sl lab.StorageLab, out io.Writer) error {
 		return err
 	}
 	tw.WriteFileBytes(
-		fmt.Sprintf("%s/vbox-setup.sh", sl.Name),
+		fmt.Sprintf("%s/setup.sh", sl.Name),
 		0700, buf)
 
 	buf = &bytes.Buffer{}

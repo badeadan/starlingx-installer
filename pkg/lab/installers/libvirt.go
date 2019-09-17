@@ -55,7 +55,7 @@ func MakeAioDxLibvirtInstaller(dx lab.AioDxLab, out io.Writer) error {
 		return err
 	}
 	tw.WriteFileBytes(
-		fmt.Sprintf("%s/libvirt-setup.sh", dx.Name),
+		fmt.Sprintf("%s/setup.sh", dx.Name),
 		0700, buf)
 
 	buf = &bytes.Buffer{}

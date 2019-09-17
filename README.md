@@ -1,8 +1,8 @@
-# StarlingX VirtualBox Installer
+# StarlingX Installer
 
-StarlingX VirtualBox Installer is a collection of tools designed for automating
-installation of StarlingX images on VirtualBox instances according to official
-instructions that can be found here (for an All-in-One system):
+StarlingX Installer is a collection of tools designed for automating
+installation of StarlingX images on VirtualBox or LibVirt instances according to
+official instructions that can be found here (for an All-in-One system):
 
 https://wiki.openstack.org/w/index.php?title=StarlingX/Containers/Installation&oldid=170746
 
@@ -23,7 +23,7 @@ Given the following inputs:
   + number of compute and storage nodes, etc.
 
 The factory will output an archive containing shell scripts to:
-- setup VirtualBox VMs and networking
+- setup VirtualBox or LibVirt VMs and networking
 - patch ISO with configuration needed by the automated installer
 - automatically install a StarlingX release
 
@@ -47,32 +47,32 @@ by installer-generator methods. The same functionality can be accessed via
 CLI using binaries provided for each setup type: `aiosx`, `aiodx`, `standard`,
 `storage`.
 
-Each binary has a large set of command line options to fine tune VirtualBox
-VMs and the installed StarlingX. All of them have default values so user can
-run the commands without providing any option.
+Each binary has a large set of command line options to fine tune VirtualBox or
+Libvirt VMs and the installed StarlingX. All of them have default values so user
+can run the commands without providing any option.
 
 As with the web server, the result is an archive containing installer scripts.
 This enables scenarios like:
 - local deployment of install scripts from local factory:
 
-      ./aiosx | tar -C /path/to/vbox/workspace -x
+      ./aiosx | tar -C /path/to/lab/workspace -x
 
  - remote deployment of install scripts from local factory:
 
-      ./aiosx | ssh user@vbox-machine tar -C /path/to/vbox/workspace -x
+      ./aiosx | ssh user@lab-machine tar -C /path/to/lab/workspace -x
 
 - local deployment of install scripts from remote factory:
 
-      ssh user@installer-factory /path/to/aiosx | tar -C /path/to/vbox/workspace -x
+      ssh user@installer-factory /path/to/aiosx | tar -C /path/to/lab/workspace -x
 
 The generated archive contains:
-- `vbox-setup.sh`: create VirtualBox VMs
+- `setup.sh`: create VirtualBox or LibVirt VMs
 - `prepare-bootimage.sh`: prepare StarlingX ISO for automatic install
 - `install.sh`: automatic installer
 - `vmctl.sh`: snapshot/restore the entire lab
 
 In order to patch the StarlingX ISO the following utilities need to be available
-before running the VirtualBox setup script:
+before running the VM setup script:
 
     fuseiso rsync fusermount mkisofs
 
@@ -88,15 +88,17 @@ Install steps are the following:
        aiosx | tar -x
        cd aiosx
 
-2. create VirtualBox VMs:
+   (to install using LibVirt run `aiosx --hypervisor libvirt`)
 
-       ./vbox-setup.sh /path/to/starlingx/iso
+2. create VMs:
+
+       ./setup.sh /path/to/starlingx/iso
 
    This will remove already existing VMs named `<setup-type>-controller-0`, etc.
    and create a new set of VMs according to specification then group them under
    `<setup-type>` (where setup-type can be aiosx, aiodx, standard, storage).
 
-   Then vbox-setup.sh calls prepare-bootimage.sh to patch the provided ISO
+   Then setup.sh calls prepare-bootimage.sh to patch the provided ISO
    image with the lab configuration and to make the automated install process
    independent of console access via serial port. The patched ISO goes through
    CentOS Anaconda steps then reboots to a state where it is accessible via
@@ -127,7 +129,7 @@ setup. It pauses all the VMs before taking a snapshot and restores them to
 a paused state then quickly resumes all of them to minimize clock skew between
 VMs.
 
-`vbox-setup.sh` creates an `env.sh` that can be sourced to enable shell
+`setup.sh` creates an `env.sh` that can be sourced to enable shell
 aliases for serial console access (they map to `socat` commands). For example:
 
      source ./env.sh
