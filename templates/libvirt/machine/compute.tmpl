@@ -1,0 +1,38 @@
+{{- define "libvirt/machine/compute" }}
+  {{- $lab := .Lab }}
+  {{- $id := .Id }}
+  {{- $name := printf "%s-compute-%d" $lab.Name .Id -}}
+- name:   "{{ $name }}"
+  cpus:   {{ $lab.ComputeCpus }}
+  memory: {{ $lab.ComputeMemory }}
+  serial: "{{ printf "${HERE}/%s-serial" $name }}"
+  disks:
+  {{- range $i := $lab.ComputeDiskCount | add1 | int | until }}
+    - device: "disk"
+      source: "{{ printf "${HERE}/%s-disk-%d.img" $name $i }}"
+      size: {{ $lab.ComputeDiskSize }}
+      bus: "sata"
+      dev: "{{ 'a' | int | add $i | printf "sd%c" }}"
+      {{- if eq $i 0 }}
+      bootorder: 1
+      {{- end }}
+  {{- end }}
+  nics:
+    - name: "unused"
+      bridge: "{{ printf "%s-oam" $lab.Name }}"
+      model: "e1000"
+      bus: 0
+      slot: 3
+    - name: "mgmt"
+      bridge: "{{ printf "%s-mgmt" $lab.Name }}"
+      model: "e1000"
+      bootorder: 2
+      bus: 0
+      slot: 8
+    - name: "data1"
+      bridge: "{{ printf "%s-data1" $lab.Name }}"
+      model: "virtio"
+    - name: "data2"
+      bridge: "{{ printf "%s-data2" $lab.Name }}"
+      model: "virtio"
+{{- end }}

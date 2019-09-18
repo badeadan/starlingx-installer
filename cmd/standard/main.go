@@ -10,7 +10,9 @@ import (
 
 func main() {
 	sl := lab.StandardLab{SystemMode: "standard"}
+	var hypervisor string
 	_default := lab.DefaultStandardLab()
+	flag.StringVar(&hypervisor, "hypervisor", "virtualbox", "hypervisor")
 	flag.StringVar(&sl.Name, "name", _default.Name, "group name")
 	flag.StringVar(&sl.NatNet, "nat-net", _default.NatNet, "nat network name")
 	flag.StringVar(&sl.LoopBackPrefix, "loop-prefix", _default.LoopBackPrefix, "nat loopback prefix")
@@ -31,8 +33,16 @@ func main() {
 	flag.UintVar(&sl.ComputeDiskCount, "compute-disk-count", _default.ComputeDiskCount, "number of extra compute disks")
 
 	flag.Parse()
-	err := installers.MakeStandardInstaller(sl, os.Stdout)
-	if err != nil {
-		log.Fatal(err)
+	if hypervisor == "libvirt" {
+		sl.LoopBackPrefix = ""
+		err := installers.MakeStandardLibvirtInstaller(sl, os.Stdout)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		err := installers.MakeStandardInstaller(sl, os.Stdout)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
