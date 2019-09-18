@@ -5,15 +5,21 @@
 pause() {
     {{- range $lab.Vms }}
       {{- $vm := . }}
-    virsh suspend "{{ $vm.Name }}"
+    virsh suspend "{{ $vm.Name }}" &
     {{- end }}
+    for pid in $(jobs -pr); do
+         wait $pid
+    done
 }
 
 resume() {
     {{- range $lab.Vms }}
       {{- $vm := . }}
-    virsh resume "{{ $vm.Name }}"
+    virsh resume "{{ $vm.Name }}" &
     {{- end }}
+    for pid in $(jobs -pr); do
+         wait $pid
+    done
 }
 
 snapshot() {

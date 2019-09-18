@@ -6,16 +6,22 @@ pause() {
     {{- range $lab.Vms }}
       {{- $vm := . }}
       {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
-    vboxmanage controlvm "{{ $vmName }}" pause
+    vboxmanage controlvm "{{ $vmName }}" pause &
     {{- end }}
+    for pid in $(jobs -pr); do
+         wait $pid
+    done
 }
 
 resume() {
     {{- range $lab.Vms }}
       {{- $vm := . }}
       {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
-    vboxmanage controlvm "{{ $vmName }}" resume
+    vboxmanage controlvm "{{ $vmName }}" resume &
     {{- end }}
+    for pid in $(jobs -pr); do
+         wait $pid
+    done
 }
 
 snapshot() {
