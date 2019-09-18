@@ -29,6 +29,7 @@ func main() {
 
 	flag.Parse()
 	if hypervisor == "libvirt" {
+		dx.LoopBackPrefix = ""
 		err := installers.MakeAioDxLibvirtInstaller(dx, os.Stdout)
 		if err != nil {
 			log.Fatal(err)
