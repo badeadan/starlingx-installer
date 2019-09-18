@@ -10,7 +10,9 @@ import (
 
 func main() {
 	sl := lab.StorageLab{SystemMode: "standard"}
+	var hypervisor string
 	_default := lab.DefaultStorageLab()
+	flag.StringVar(&hypervisor, "hypervisor", "virtualbox", "hypervisor")
 	flag.StringVar(&sl.Name, "name", _default.Name, "group name")
 	flag.StringVar(&sl.NatNet, "nat-net", _default.NatNet, "nat network name")
 	flag.StringVar(&sl.LoopBackPrefix, "loopback-prefix", _default.LoopBackPrefix, "nat loopback prefix")
@@ -36,8 +38,16 @@ func main() {
 	flag.UintVar(&sl.StorageDiskSize, "storage-disk", _default.StorageDiskSize, "storage disk size")
 
 	flag.Parse()
-	err := installers.MakeStorageInstaller(sl, os.Stdout)
-	if err != nil {
-		log.Fatal(err)
+	if hypervisor == "libvirt" {
+		sl.LoopBackPrefix = ""
+		err := installers.MakeStorageLibvirtInstaller(sl, os.Stdout)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		err := installers.MakeStorageInstaller(sl, os.Stdout)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }

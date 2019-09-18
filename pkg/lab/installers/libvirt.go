@@ -211,3 +211,70 @@ func MakeStandardLibvirtInstaller(sl lab.StandardLab, out io.Writer) error {
 
 	return tw.Close()
 }
+
+func MakeStorageLibvirtInstaller(sl lab.StorageLab, out io.Writer) error {
+	t := lab.NewTxtTemplate()
+	box := packr.New("LibvirtTemplates", "./templates/libvirt")
+	t = template.Must(lab.DiscoverTemplates(box, "libvirt", t))
+	box = packr.New("InstallTemplates", "./templates/install")
+	t = template.Must(lab.DiscoverTemplates(box, "install", t))
+	tw := &TarWriter{tar.NewWriter(out)}
+
+	virt := lab.LibvirtLab{}
+	buf := &bytes.Buffer{}
+	err := t.ExecuteTemplate(buf, "libvirt/lab/storage", sl)
+	if err != nil {
+		return err
+	}
+	err = yaml.Unmarshal(buf.Bytes(), &virt)
+	if err != nil {
+		return err
+	}
+
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "libvirt/setup", virt)
+	if err != nil {
+		return err
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/setup.sh", sl.Name),
+		0700, buf)
+
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "install/prepare-bootimage", sl)
+	if err != nil {
+		return err
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/prepare-bootimage.sh", sl.Name),
+		0700, buf)
+
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "install/lab/storage", sl)
+	if err != nil {
+		return err
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/install.sh", sl.Name),
+		0700, buf)
+
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "libvirt/vmctl", virt)
+	if err != nil {
+		return err
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/vmctl.sh", sl.Name),
+		0700, buf)
+
+	buf = &bytes.Buffer{}
+	err = t.ExecuteTemplate(buf, "install/readme", sl)
+	if err != nil {
+		return err
+	}
+	tw.WriteFileBytes(
+		fmt.Sprintf("%s/README.txt", sl.Name),
+		0700, buf)
+
+	return tw.Close()
+}

@@ -1,0 +1,32 @@
+{{- define "libvirt/machine/storage" }}
+  {{- $lab := .Lab }}
+  {{- $id := .Id }}
+  {{- $name := printf "%s-storage-%d" $lab.Name .Id -}}
+- name:   "{{ $name }}"
+  cpus:   {{ $lab.StorageCpus }}
+  memory: {{ $lab.StorageMemory }}
+  serial: "{{ printf "${HERE}/%s-serial" $name }}"
+  disks:
+  {{- range $i := $lab.StorageDiskCount | add1 | int | until }}
+    - device: "disk"
+      source: "{{ printf "${HERE}/%s-disk-%d.img" $name $i }}"
+      size: {{ $lab.StorageDiskSize }}
+      bus: "sata"
+      dev: "{{ 'a' | int | add $i | printf "sd%c" }}"
+      {{- if eq $i 0 }}
+      bootorder: 1
+      {{- end }}
+  {{- end }}
+  nics:
+    - name: "unused"
+      bridge: "{{ printf "%s-oam" $lab.Name }}"
+      model: "e1000"
+      bus: 0
+      slot: 3
+    - name: "mgmt"
+      bridge: "{{ printf "%s-mgmt" $lab.Name }}"
+      model: "e1000"
+      bootorder: 2
+      bus: 0
+      slot: 8
+{{- end }}

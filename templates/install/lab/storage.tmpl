@@ -1,6 +1,7 @@
 {{- define "install/lab/storage" -}}
   {{- $lab := . -}}
 #!/usr/bin/env bash
+HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
 
 INSTALL_TIMEOUT=${INSTALL_TIMEOUT:-40}
 REBOOT_TIMEOUT=${REBOOT_TIMEOUT:-30}
@@ -23,7 +24,7 @@ setup_ssh
 
 # boot controller-0
 #
-vboxmanage startvm {{ printf "%s-controller-0" $lab.Name }} --type headless || die
+${HERE}/vmctl.sh start controller-0 || die
 wait_ssh_up controller-0 ${INSTALL_TIMEOUT}
 wait_systemd_multi_user_target controller-0 ${REBOOT_TIMEOUT}
 
@@ -87,7 +88,7 @@ wait_host_status controller-0 10 unlocked/enabled/available
 # install remaining hosts
 #
 NEXT_HOST_ID=2
-vboxmanage startvm {{ printf "%s-controller-1" $lab.Name }} --type headless || die
+${HERE}/vmctl.sh start controller-1 || die
 wait_until_host_id_assigned ${NEXT_HOST_ID} 5
 ssh -F ./ssh.config controller-0 \
     bash <<EOF
@@ -99,7 +100,7 @@ NEXT_HOST_ID=$((NEXT_HOST_ID + 1))
 
 {{- range $i := until (int $lab.ComputeCount) }}
 sleep 30
-vboxmanage startvm {{ printf "%s-compute-%d" $lab.Name $i }} --type headless || die
+${HERE}/vmctl.sh start {{ printf "compute-%d" $i }} || die
 wait_until_host_id_assigned ${NEXT_HOST_ID} 5
 ssh -F ./ssh.config controller-0 \
     bash <<EOF
@@ -112,7 +113,7 @@ NEXT_HOST_ID=$((NEXT_HOST_ID + 1))
 
 {{- range $i := until (int $lab.StorageCount) }}
 sleep 30
-vboxmanage startvm {{ printf "%s-storage-%d" $lab.Name $i }} --type headless || die
+${HERE}/vmctl.sh start {{ printf "storage-%d" $i }} || die
 wait_until_host_id_assigned ${NEXT_HOST_ID} 5
 ssh -F ./ssh.config controller-0 \
     bash <<EOF
@@ -205,7 +206,11 @@ EOF
 {{- range $i := until (int $lab.StorageCount) }}
 wait_host_status storage-{{ $i }} $((REBOOT_TIMEOUT + 10)) unlocked/enabled/available
 {{- end }}
+ssh -F ./ssh.config controller-0 \
+    bash <<'EOF'
+set -x
 ceph -s
+EOF
 
 # provision computes
 #
