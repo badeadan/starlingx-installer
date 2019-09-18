@@ -5,7 +5,7 @@
 pause() {
     {{- range $lab.Vms }}
       {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     vboxmanage controlvm "{{ $vmName }}" pause &
     {{- end }}
     for pid in $(jobs -pr); do
@@ -16,7 +16,7 @@ pause() {
 resume() {
     {{- range $lab.Vms }}
       {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     vboxmanage controlvm "{{ $vmName }}" resume &
     {{- end }}
     for pid in $(jobs -pr); do
@@ -29,7 +29,7 @@ snapshot() {
     pause "$1"
     {{- range $lab.Vms }}
       {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     vboxmanage snapshot "{{ $vmName }}" take "${name}"
     {{- end }}
     resume "$1"
@@ -40,7 +40,7 @@ restore() {
     pause
     {{- range $lab.Vms }}
       {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     vboxmanage controlvm "{{ $vmName }}" poweroff
     vboxmanage snapshot "{{ $vmName }}" restore "${name}"
     while true; do
@@ -51,13 +51,13 @@ restore() {
     {{- end }}
     {{- range $lab.Vms }}
       {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     nohup vboxheadless --start-paused --startvm "{{ $vmName }}" >/dev/null 2>&1 &
     {{- end }}
     sleep 10
     {{- range $lab.Vms }}
       {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     while true; do
         eval $(vboxmanage showvminfo --machinereadable "{{ $vmName }}" | grep VMState)
         [[ "${VMState}" != "restoring" ]] && break

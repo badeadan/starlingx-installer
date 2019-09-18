@@ -9,7 +9,7 @@ cleanup() {
     # networks
     {{- range $lab.Vms }}
       {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     vboxmanage unregistervm "{{ $vmName }}" --delete >/dev/null 2>&1
       {{- range $i, $disk := $vm.Disks }}
     vboxmanage closemedium "{{ $disk.Medium }}" --delete >/dev/null 2>&1
@@ -38,7 +38,7 @@ run() {
 
 setup_vbox() {
     # remove older configs
-    rm -rf ~/.config/VirtualBox/{{ $lab.Group }}
+    rm -rf ~/.config/VirtualBox/{{ $lab.Name }}
 
     # setup networks
     #
@@ -70,7 +70,7 @@ setup_vbox() {
     {{- end }}
     {{- range .Vms }}
       {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     # setup {{ $vm.Name }}
     #
     vboxmanage unregistervm "{{ $vmName }}" --delete >/dev/null 2>&1
@@ -89,7 +89,7 @@ setup_vbox() {
               --name "{{ $vmName }}" \
               --ostype Other_64 \
               --basefolder $(readlink -f "{{ $lab.BasePath }}") \
-              --groups "/{{ $.Group }}"
+              --groups "/{{ $.Name }}"
     run vboxmanage modifyvm "{{ $vmName }}" \
               --cpus "{{ $vm.Cpus }}" \
               --memory "{{ mul $vm.Memory 1024 }}" \
@@ -160,7 +160,7 @@ EOF
 setup_environment() {
     cat >env.sh <<EOF
 {{- range $_, $vm := .Vms }}
-  {{- $vmName := printf "%s-%s" $lab.Group $vm.Name }}
+  {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
 alias {{ $vmName }}-serial="socat stdio,raw,echo=0,icanon=0,escape=0x11 $(readlink -f '{{ $lab.BasePath }}/{{ $vmName }}-serial')"
 {{- end }}
 EOF

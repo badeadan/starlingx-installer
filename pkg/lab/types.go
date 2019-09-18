@@ -61,7 +61,7 @@ type OamInfo struct {
 
 type Lab struct {
 	Type     string
-	Group    string
+	Name    string
 	BasePath string
 	Vms      []Vm
 	Networks []Network
