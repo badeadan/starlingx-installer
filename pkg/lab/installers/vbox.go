@@ -4,34 +4,15 @@ import (
 	"archive/tar"
 	"bytes"
 	"fmt"
-	"github.com/Masterminds/sprig"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
 	"github.com/gobuffalo/packr/v2"
 	"gopkg.in/yaml.v2"
 	"io"
-	"net"
 	"text/template"
 )
 
 func MakeAioSxInstaller(sx lab.AioSxLab, out io.Writer) error {
-	t := template.New("")
-	t = t.Funcs(sprig.TxtFuncMap())
-	t = t.Funcs(template.FuncMap{
-		"include": func(name string, data interface{}) (string, error) {
-			buf := &bytes.Buffer{}
-			err := t.ExecuteTemplate(buf, name, data)
-			return buf.String(), err
-		},
-		"NetCidrMask": func(cidr string) (string, error) {
-			_, n, err := net.ParseCIDR(cidr)
-			mask := ""
-			if err == nil {
-				mask = fmt.Sprintf("%d.%d.%d.%d",
-					n.Mask[0], n.Mask[1], n.Mask[2], n.Mask[3])
-			}
-			return mask, err
-		},
-	})
+	t := lab.NewTxtTemplate()
 	box := packr.New("VboxTemplates", "./templates/vbox")
 	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
 	box = packr.New("InstallTemplates", "./templates/install")
@@ -98,24 +79,7 @@ func MakeAioSxInstaller(sx lab.AioSxLab, out io.Writer) error {
 }
 
 func MakeAioDxInstaller(dx lab.AioDxLab, out io.Writer) error {
-	t := template.New("")
-	t = t.Funcs(sprig.TxtFuncMap())
-	t = t.Funcs(template.FuncMap{
-		"include": func(name string, data interface{}) (string, error) {
-			buf := &bytes.Buffer{}
-			err := t.ExecuteTemplate(buf, name, data)
-			return buf.String(), err
-		},
-		"NetCidrMask": func(cidr string) (string, error) {
-			_, n, err := net.ParseCIDR(cidr)
-			mask := ""
-			if err == nil {
-				mask = fmt.Sprintf("%d.%d.%d.%d",
-					n.Mask[0], n.Mask[1], n.Mask[2], n.Mask[3])
-			}
-			return mask, err
-		},
-	})
+	t := lab.NewTxtTemplate()
 	box := packr.New("VboxTemplates", "./templates/vbox")
 	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
 	box = packr.New("InstallTemplates", "./templates/install")
@@ -182,24 +146,7 @@ func MakeAioDxInstaller(dx lab.AioDxLab, out io.Writer) error {
 }
 
 func MakeStandardInstaller(sl lab.StandardLab, out io.Writer) error {
-	t := template.New("")
-	t = t.Funcs(sprig.TxtFuncMap())
-	t = t.Funcs(template.FuncMap{
-		"include": func(name string, data interface{}) (string, error) {
-			buf := &bytes.Buffer{}
-			err := t.ExecuteTemplate(buf, name, data)
-			return buf.String(), err
-		},
-		"NetCidrMask": func(cidr string) (string, error) {
-			_, n, err := net.ParseCIDR(cidr)
-			mask := ""
-			if err == nil {
-				mask = fmt.Sprintf("%d.%d.%d.%d",
-					n.Mask[0], n.Mask[1], n.Mask[2], n.Mask[3])
-			}
-			return mask, err
-		},
-	})
+	t := lab.NewTxtTemplate()
 	box := packr.New("VboxTemplates", "./templates/vbox")
 	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
 	box = packr.New("InstallTemplates", "./templates/install")
@@ -266,25 +213,7 @@ func MakeStandardInstaller(sl lab.StandardLab, out io.Writer) error {
 }
 
 func MakeStorageInstaller(sl lab.StorageLab, out io.Writer) error {
-
-	t := template.New("")
-	t = t.Funcs(sprig.TxtFuncMap())
-	t = t.Funcs(template.FuncMap{
-		"include": func(name string, data interface{}) (string, error) {
-			buf := &bytes.Buffer{}
-			err := t.ExecuteTemplate(buf, name, data)
-			return buf.String(), err
-		},
-		"NetCidrMask": func(cidr string) (string, error) {
-			_, n, err := net.ParseCIDR(cidr)
-			mask := ""
-			if err == nil {
-				mask = fmt.Sprintf("%d.%d.%d.%d",
-					n.Mask[0], n.Mask[1], n.Mask[2], n.Mask[3])
-			}
-			return mask, err
-		},
-	})
+	t := lab.NewTxtTemplate()
 	box := packr.New("VboxTemplates", "./templates/vbox")
 	t = template.Must(lab.DiscoverTemplates(box, "vbox", t))
 	box = packr.New("InstallTemplates", "./templates/install")
