@@ -17,11 +17,8 @@
     <apic/>
     <pae/>
   </features>
-  <cpu match='exact'>
-    <model fallback='forbid'>Nehalem</model>
+  <cpu mode='host-model'>
     <topology sockets='1' cores='{{ $vm.Cpus }}' threads='1'/>
-    <feature policy='optional' name='vmx'/>
-    <feature policy='optional' name='svm'/>
   </cpu>
   <clock offset='utc'/>
   <on_poweroff>destroy</on_poweroff>
