@@ -7,6 +7,7 @@ HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
 TOOL_DEPENDENCIES=""
 
 source ./prepare-bootimage.sh
+chmod g+w .
 
 cleanup() {
     {{- range $lab.Vms }}
