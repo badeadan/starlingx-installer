@@ -43,8 +43,11 @@
     {{- end }}
     {{- range $i, $nic := $vm.Nics }}
     <interface type='bridge'>
+      {{- if or $nic.Bus $nic.Slot }}
+      <address type='pci' domain='0' bus='{{ $nic.Bus }}' slot='{{ $nic.Slot }}' function='0'/>
+      {{- end }}
       <source bridge='{{ $nic.Bridge }}'/>
-      <target dev='{{ printf "v%s%s" $lab.Name $nic.Name }}'/>
+      <target dev='{{ printf "v%s%s" ($vm.Name | NameHash ) $nic.Name }}'/>
       <model type='{{ $nic.Model }}'/>
       <alias name='{{ $nic.Name }}'/>
       {{- if $nic.BootOrder }}

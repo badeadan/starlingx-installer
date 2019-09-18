@@ -154,6 +154,8 @@ type LibvirtNic struct {
 	Name      string
 	Bridge    string
 	Model     string
+	Bus       uint
+	Slot      uint
 	BootOrder uint
 }
 

@@ -105,10 +105,8 @@ setup_oam_interface() {
     local ks_file=$1
     cat <<'OUTER_EOF' >>${ks_file}
 %post --erroronfail
-# configure OAM interface in VBox or LibVirt
-for DEVICE in enp0s3 enp7s1; do
-    [[ -e ${DEVICE} ]] && break
-done
+# configure OAM interface
+DEVICE=enp0s3
 cat <<EOF >/etc/sysconfig/network-scripts/ifcfg-${DEVICE}
 DEVICE=${DEVICE}
 IPADDR={{ default $lab.Oam.FloatAddr $lab.Oam.Controller0 }}

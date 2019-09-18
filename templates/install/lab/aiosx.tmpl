@@ -44,9 +44,7 @@ echo "# configure OAM interface"
 ssh -F ./ssh.config controller-0 \
     bash <<'EOF' || die
 source /etc/platform/openrc
-for OAM_IF in enp0s3 enp7s1; do
-    [[ -e /sys/class/net/${OAM_IF} ]] && break
-done
+OAM_IF=enp0s3
 set -x
 system host-if-modify controller-0 $OAM_IF -c platform
 system interface-network-assign controller-0 $OAM_IF oam

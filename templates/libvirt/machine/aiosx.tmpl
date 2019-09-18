@@ -26,6 +26,8 @@
     - name: "oam"
       bridge: "{{ printf "%s-oam" $lab.Name }}"
       model: "e1000"
+      bus: 0
+      slot: 3
     - name: "data1"
       bridge: "{{ printf "%s-data1" $lab.Name }}"
       model: "virtio"
