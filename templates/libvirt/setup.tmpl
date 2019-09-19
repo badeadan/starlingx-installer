@@ -95,7 +95,11 @@ EOF
 setup_environment() {
     cat >env.sh <<EOF
 {{- range $_, $vm := .Vms }}
-alias {{ $vm.Name }}-serial="socat stdio,raw,echo=0,icanon=0,escape=0x11 $(readlink -f '{{ $lab.BasePath }}/{{ $vm.Name }}-serial')"
+{{- if hasPrefix $lab.Name $vm.Name }}
+alias {{ printf "%s-serial" $vm.Name }}="socat stdio,raw,echo=0,icanon=0,escape=0x11 $(readlink -f '{{ $lab.BasePath }}/{{ $vm.Name }}-serial')"
+{{- else }}
+alias {{ printf "%s-%s-serial" $lab.Name $vm.Name }}="socat stdio,raw,echo=0,icanon=0,escape=0x11 $(readlink -f '{{ $lab.BasePath }}/{{ $vm.Name }}-serial')"
+{{- end }}
 {{- end }}
 EOF
 }
