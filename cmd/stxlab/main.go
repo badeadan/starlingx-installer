@@ -547,6 +547,7 @@ func main() {
 
 	// force packr template discovery
 	_ = packr.New("VboxTemplates", "./templates/vbox")
+	_ = packr.New("LibvirtTemplates", "./templates/libvirt")
 	_ = packr.New("InstallTemplates", "./templates/install")
 	_ = packr.New("WebTemplates", "./templates/web")
 
