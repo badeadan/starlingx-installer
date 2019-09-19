@@ -10,9 +10,8 @@ import (
 
 func main() {
 	dx := lab.AioDxLab{SystemMode: "duplex"}
-	var hypervisor string
 	_default := lab.DefaultAioDxLab()
-	flag.StringVar(&hypervisor, "hypervisor", "virtualbox", "hypervisor")
+	flag.StringVar(&dx.Hypervisor, "hypervisor", "virtualbox", "hypervisor")
 	flag.StringVar(&dx.Name, "name", _default.Name, "group name")
 	flag.StringVar(&dx.NatNet, "nat-net", _default.NatNet, "nat network name")
 	flag.StringVar(&dx.LoopBackPrefix, "loop-prefix", _default.LoopBackPrefix, "nat loopback prefix")
@@ -28,7 +27,7 @@ func main() {
 	flag.UintVar(&dx.DiskCount, "disk-count", _default.DiskCount, "number of extra controller disks")
 
 	flag.Parse()
-	if hypervisor == "libvirt" {
+	if dx.Hypervisor == "libvirt" {
 		dx.LoopBackPrefix = ""
 		err := installers.MakeAioDxLibvirtInstaller(dx, os.Stdout)
 		if err != nil {

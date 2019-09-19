@@ -24,6 +24,7 @@ func redirect2AioSx(w http.ResponseWriter, r *http.Request) {
 
 type AioSxForm struct {
 	Name           string `form:"label=Lab Name"`
+	Hypervisor     string `form:"label=Hypervisor;type=select"`
 	NatNet         string `form:"label=NAT Network"`
 	LoopBackPrefix string `form:"label=Loopback Prefix"`
 	IntNetPrefix   string `form:"label=Internal Network Prefix"`
@@ -39,6 +40,7 @@ type AioSxForm struct {
 func AioSxForm2Lab(form AioSxForm) lab.AioSxLab {
 	return lab.AioSxLab{
 		Name:           form.Name,
+		Hypervisor:     form.Hypervisor,
 		NatNet:         form.NatNet,
 		LoopBackPrefix: form.LoopBackPrefix,
 		IntNetPrefix:   form.IntNetPrefix,
@@ -57,6 +59,7 @@ func AioSxForm2Lab(form AioSxForm) lab.AioSxLab {
 func AioSxLab2Form(l lab.AioSxLab) AioSxForm {
 	return AioSxForm{
 		Name:           l.Name,
+		Hypervisor:     l.Hypervisor,
 		NatNet:         l.NatNet,
 		LoopBackPrefix: l.LoopBackPrefix,
 		IntNetPrefix:   l.IntNetPrefix,
@@ -76,7 +79,7 @@ func handleAioSx(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	tpl := template.Must(template.New("").Funcs(form.FuncMap()).Parse(inputTpl))
+	tpl := template.Must(template.New("").Funcs(sprig.FuncMap()).Funcs(form.FuncMap()).Parse(inputTpl))
 	fb := form.Builder{
 		InputTemplate: tpl,
 	}
@@ -114,8 +117,13 @@ func handleAioSx(w http.ResponseWriter, r *http.Request) {
 
 		modtime := time.Now()
 		var content bytes.Buffer
-		err = installers.MakeAioSxInstaller(
-			AioSxForm2Lab(form), io.Writer(&content))
+		if form.Hypervisor == "LibVirt" {
+			err = installers.MakeAioSxLibvirtInstaller(
+				AioSxForm2Lab(form), io.Writer(&content))
+		} else {
+			err = installers.MakeAioSxInstaller(
+				AioSxForm2Lab(form), io.Writer(&content))
+		}
 		const name = "stx-lab-aiosx.tar"
 		w.Header().Add("Content-Disposition",
 			fmt.Sprintf("Attachment; filename=%s", name))
@@ -128,6 +136,7 @@ func handleAioSx(w http.ResponseWriter, r *http.Request) {
 
 type AioDxForm struct {
 	Name           string `form:"label=Lab Name"`
+	Hypervisor     string `form:"label=Hypervisor;type=select"`
 	NatNet         string `form:"label=NAT Network"`
 	LoopBackPrefix string `form:"label=Loopback Prefix"`
 	IntNetPrefix   string `form:"label=Internal Network Prefix"`
@@ -145,6 +154,7 @@ type AioDxForm struct {
 func AioDxForm2Lab(form AioDxForm) lab.AioDxLab {
 	return lab.AioDxLab{
 		Name:           form.Name,
+		Hypervisor:     form.Hypervisor,
 		NatNet:         form.NatNet,
 		LoopBackPrefix: form.LoopBackPrefix,
 		IntNetPrefix:   form.IntNetPrefix,
@@ -165,6 +175,7 @@ func AioDxForm2Lab(form AioDxForm) lab.AioDxLab {
 func AioDxLab2Form(l lab.AioDxLab) AioDxForm {
 	return AioDxForm{
 		Name:           l.Name,
+		Hypervisor:     l.Hypervisor,
 		NatNet:         l.NatNet,
 		LoopBackPrefix: l.LoopBackPrefix,
 		IntNetPrefix:   l.IntNetPrefix,
@@ -224,9 +235,15 @@ func handleAioDx(w http.ResponseWriter, r *http.Request) {
 
 		modtime := time.Now()
 		var content bytes.Buffer
-		err = installers.MakeAioDxInstaller(
-			AioDxForm2Lab(form),
-			io.Writer(&content))
+		if form.Hypervisor == "LibVirt" {
+			err = installers.MakeAioDxLibvirtInstaller(
+				AioDxForm2Lab(form),
+				io.Writer(&content))
+		} else {
+			err = installers.MakeAioDxInstaller(
+				AioDxForm2Lab(form),
+				io.Writer(&content))
+		}
 		const name = "stx-lab-aiodx.tar"
 		w.Header().Add("Content-Disposition",
 			fmt.Sprintf("Attachment; filename=%s", name))
@@ -239,6 +256,7 @@ func handleAioDx(w http.ResponseWriter, r *http.Request) {
 
 type StandardForm struct {
 	Name                string `form:"label=Lab Name"`
+	Hypervisor          string `form:"label=Hypervisor;type=select"`
 	NatNet              string `form:"label=NAT Network"`
 	LoopBackPrefix      string `form:"label=Loopback Prefix"`
 	IntNetPrefix        string `form:"label=Internal Network Prefix"`
@@ -261,6 +279,7 @@ type StandardForm struct {
 func StandardForm2Lab(form StandardForm) lab.StandardLab {
 	return lab.StandardLab{
 		Name:           form.Name,
+		Hypervisor:     form.Hypervisor,
 		NatNet:         form.NatNet,
 		LoopBackPrefix: form.LoopBackPrefix,
 		IntNetPrefix:   form.IntNetPrefix,
@@ -286,6 +305,7 @@ func StandardForm2Lab(form StandardForm) lab.StandardLab {
 func StandardLab2Form(l lab.StandardLab) StandardForm {
 	return StandardForm{
 		Name:                l.Name,
+		Hypervisor:          l.Hypervisor,
 		NatNet:              l.NatNet,
 		LoopBackPrefix:      l.LoopBackPrefix,
 		IntNetPrefix:        l.IntNetPrefix,
@@ -350,9 +370,16 @@ func handleStandard(w http.ResponseWriter, r *http.Request) {
 
 		modtime := time.Now()
 		var content bytes.Buffer
-		err = installers.MakeStandardInstaller(
-			StandardForm2Lab(form),
-			io.Writer(&content))
+		if form.Hypervisor == "LibVirt" {
+			err = installers.MakeStandardLibvirtInstaller(
+				StandardForm2Lab(form),
+				io.Writer(&content))
+		} else {
+
+			err = installers.MakeStandardInstaller(
+				StandardForm2Lab(form),
+				io.Writer(&content))
+		}
 		const name = "stx-lab-standard.tar"
 		w.Header().Add("Content-Disposition",
 			fmt.Sprintf("Attachment; filename=%s", name))
@@ -365,6 +392,7 @@ func handleStandard(w http.ResponseWriter, r *http.Request) {
 
 type StorageForm struct {
 	Name                string `form:"label=Lab Name"`
+	Hypervisor          string `form:"label=Hypervisor;type=select"`
 	NatNet              string `form:"label=NAT Network"`
 	LoopBackPrefix      string `form:"label=Loopback Prefix"`
 	IntNetPrefix        string `form:"label=Internal Network Prefix"`
@@ -392,6 +420,7 @@ type StorageForm struct {
 func StorageForm2Lab(form StorageForm) lab.StorageLab {
 	return lab.StorageLab{
 		Name:           form.Name,
+		Hypervisor:     form.Hypervisor,
 		NatNet:         form.NatNet,
 		LoopBackPrefix: form.LoopBackPrefix,
 		IntNetPrefix:   form.IntNetPrefix,
@@ -402,48 +431,49 @@ func StorageForm2Lab(form StorageForm) lab.StorageLab {
 			Controller0: form.Controller0,
 			Controller1: form.Controller1,
 		},
-		ControllerCpus:     form.ControllerCpus,
-		ControllerMemory:   form.ControllerMemory,
-		ControllerDiskSize: form.ControllerDiskSize,
+		ControllerCpus:      form.ControllerCpus,
+		ControllerMemory:    form.ControllerMemory,
+		ControllerDiskSize:  form.ControllerDiskSize,
 		ControllerDiskCount: form.ControllerDiskCount,
-		ComputeCount:       form.ComputeCount,
-		ComputeCpus:        form.ComputeCpus,
-		ComputeMemory:      form.ComputeMemory,
-		ComputeDiskSize:    form.ComputeDiskSize,
+		ComputeCount:        form.ComputeCount,
+		ComputeCpus:         form.ComputeCpus,
+		ComputeMemory:       form.ComputeMemory,
+		ComputeDiskSize:     form.ComputeDiskSize,
 		ComputeDiskCount:    form.ComputeDiskCount,
-		StorageCount:       form.StorageCount,
-		StorageCpus:        form.StorageCpus,
-		StorageMemory:      form.StorageMemory,
-		StorageDiskSize:    form.StorageDiskSize,
+		StorageCount:        form.StorageCount,
+		StorageCpus:         form.StorageCpus,
+		StorageMemory:       form.StorageMemory,
+		StorageDiskSize:     form.StorageDiskSize,
 		StorageDiskCount:    form.StorageDiskCount,
 	}
 }
 
 func StorageLab2Form(l lab.StorageLab) StorageForm {
 	return StorageForm{
-		Name:               l.Name,
-		NatNet:             l.NatNet,
-		LoopBackPrefix:     l.LoopBackPrefix,
-		IntNetPrefix:       l.IntNetPrefix,
-		Network:            l.Oam.Network,
-		Gateway:            l.Oam.Gateway,
-		FloatAddr:          l.Oam.FloatAddr,
-		Controller0:        l.Oam.Controller0,
-		Controller1:        l.Oam.Controller1,
-		ControllerCpus:     l.ControllerCpus,
-		ControllerMemory:   l.ControllerMemory,
-		ControllerDiskSize: l.ControllerDiskSize,
+		Name:                l.Name,
+		Hypervisor:          l.Hypervisor,
+		NatNet:              l.NatNet,
+		LoopBackPrefix:      l.LoopBackPrefix,
+		IntNetPrefix:        l.IntNetPrefix,
+		Network:             l.Oam.Network,
+		Gateway:             l.Oam.Gateway,
+		FloatAddr:           l.Oam.FloatAddr,
+		Controller0:         l.Oam.Controller0,
+		Controller1:         l.Oam.Controller1,
+		ControllerCpus:      l.ControllerCpus,
+		ControllerMemory:    l.ControllerMemory,
+		ControllerDiskSize:  l.ControllerDiskSize,
 		ControllerDiskCount: l.ControllerDiskCount,
-		ComputeCount:       l.ComputeCount,
-		ComputeCpus:        l.ComputeCpus,
-		ComputeMemory:      l.ComputeMemory,
-		ComputeDiskSize:    l.ComputeDiskSize,
+		ComputeCount:        l.ComputeCount,
+		ComputeCpus:         l.ComputeCpus,
+		ComputeMemory:       l.ComputeMemory,
+		ComputeDiskSize:     l.ComputeDiskSize,
 		ComputeDiskCount:    l.ComputeDiskCount,
-		StorageCount:       l.StorageCount,
-		StorageCpus:        l.StorageCpus,
-		StorageMemory:      l.StorageMemory,
-		StorageDiskSize:    l.StorageDiskSize,
-		StorageDiskCount:   l.StorageDiskCount,
+		StorageCount:        l.StorageCount,
+		StorageCpus:         l.StorageCpus,
+		StorageMemory:       l.StorageMemory,
+		StorageDiskSize:     l.StorageDiskSize,
+		StorageDiskCount:    l.StorageDiskCount,
 	}
 }
 
@@ -491,9 +521,15 @@ func handleStorage(w http.ResponseWriter, r *http.Request) {
 
 		modtime := time.Now()
 		var content bytes.Buffer
-		err = installers.MakeStorageInstaller(
-			StorageForm2Lab(form),
-			io.Writer(&content))
+		if form.Hypervisor == "LibVirt" {
+			err = installers.MakeStorageLibvirtInstaller(
+				StorageForm2Lab(form),
+				io.Writer(&content))
+		} else {
+			err = installers.MakeStorageInstaller(
+				StorageForm2Lab(form),
+				io.Writer(&content))
+		}
 		const name = "stx-lab-storage.tar"
 		w.Header().Add("Content-Disposition",
 			fmt.Sprintf("Attachment; filename=%s", name))

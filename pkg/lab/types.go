@@ -61,7 +61,7 @@ type OamInfo struct {
 
 type Lab struct {
 	Type     string
-	Name    string
+	Name     string
 	BasePath string
 	Vms      []Vm
 	Networks []Network
@@ -69,6 +69,7 @@ type Lab struct {
 
 type AioSxLab struct {
 	Name           string
+	Hypervisor     string
 	SystemMode     string
 	NatNet         string
 	LoopBackPrefix string
@@ -82,6 +83,7 @@ type AioSxLab struct {
 
 type AioDxLab struct {
 	Name           string
+	Hypervisor     string
 	SystemMode     string
 	NatNet         string
 	LoopBackPrefix string
@@ -95,6 +97,7 @@ type AioDxLab struct {
 
 type StandardLab struct {
 	Name                string
+	Hypervisor          string
 	SystemMode          string
 	NatNet              string
 	LoopBackPrefix      string
@@ -113,6 +116,7 @@ type StandardLab struct {
 
 type StorageLab struct {
 	Name                string
+	Hypervisor          string
 	SystemMode          string
 	NatNet              string
 	LoopBackPrefix      string

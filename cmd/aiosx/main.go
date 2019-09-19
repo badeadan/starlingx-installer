@@ -10,9 +10,8 @@ import (
 
 func main() {
 	sx := lab.AioSxLab{SystemMode: "simplex"}
-	var hypervisor string
 	_default := lab.DefaultAioSxLab()
-	flag.StringVar(&hypervisor, "hypervisor", "virtualbox", "hypervisor")
+	flag.StringVar(&sx.Hypervisor, "hypervisor", "virtualbox", "hypervisor")
 	flag.StringVar(&sx.Name, "name", _default.Name, "group name")
 	flag.StringVar(&sx.NatNet, "nat-net", _default.NatNet, "nat network name")
 	flag.StringVar(&sx.LoopBackPrefix, "loop-prefix", _default.LoopBackPrefix, "nat loopback prefix")
@@ -26,7 +25,7 @@ func main() {
 	flag.UintVar(&sx.DiskCount, "disk-count", _default.DiskCount, "number of extra controller disks")
 
 	flag.Parse()
-	if hypervisor == "libvirt" {
+	if sx.Hypervisor == "libvirt" {
 		sx.LoopBackPrefix = ""
 		err := installers.MakeAioSxLibvirtInstaller(sx, os.Stdout)
 		if err != nil {

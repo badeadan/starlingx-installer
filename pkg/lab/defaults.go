@@ -3,6 +3,7 @@ package lab
 func DefaultAioSxLab() AioSxLab {
 	return AioSxLab{
 		Name: "aiosx",
+		Hypervisor: "VirtualBox,LibVirt",
 		SystemMode: "simplex",
 		NatNet: "nat2",
 		LoopBackPrefix: "127.0.2",
@@ -24,6 +25,7 @@ func DefaultAioSxLab() AioSxLab {
 func DefaultAioDxLab() AioDxLab {
 	return AioDxLab{
 		Name: "aiodx",
+		Hypervisor: "VirtualBox,LibVirt",
 		SystemMode: "duplex",
 		NatNet: "nat3",
 		LoopBackPrefix: "127.0.3",
@@ -45,6 +47,7 @@ func DefaultAioDxLab() AioDxLab {
 func DefaultStandardLab() StandardLab {
 	return StandardLab{
 		Name: "standard",
+		Hypervisor: "VirtualBox,LibVirt",
 		SystemMode: "standard",
 		NatNet: "nat4",
 		LoopBackPrefix: "127.0.4",
@@ -71,6 +74,7 @@ func DefaultStandardLab() StandardLab {
 func DefaultStorageLab() StorageLab {
 	return StorageLab{
 		Name: "storage",
+		Hypervisor: "VirtualBox,LibVirt",
 		SystemMode: "duplex",
 		NatNet: "nat5",
 		LoopBackPrefix: "127.0.5",
