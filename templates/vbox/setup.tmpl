@@ -176,7 +176,9 @@ ERROR!   sudo usermod -a -G vboxusers $USER
 EOF
     fi
     check_dependencies
-    prepare_bootimage ${ISO_PATH}
+    if [[ -n "${ISO_PATH}" ]]; then
+        prepare_bootimage ${ISO_PATH}
+    fi
     setup_vbox
     setup_environment
     echo "\nDONE!"
@@ -184,8 +186,7 @@ EOF
 
 ISO_PATH=$1
 if [[ -z "${ISO_PATH}" ]]; then
-    echo 'ERROR! missing iso path' >&2
-    exit 1
+    echo 'WARNING! missing iso path. Will use existing bootimage-auto.iso (if present)' >&2
 fi
 main
 {{- end }}
