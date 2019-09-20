@@ -2,37 +2,91 @@
   {{- $lab := . -}}
 #!/usr/bin/env bash
 
-pause() {
-    {{- range $lab.Vms }}
-      {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
-    vboxmanage controlvm "{{ $vmName }}" pause &
-    {{- end }}
-    for pid in $(jobs -pr); do
-         wait $pid
+wait_vm_state() {
+    local name="$1"; shift
+    while true; do
+        eval $(vboxmanage showvminfo --machinereadable "${name}" | grep VMState)
+        for target in "$@"; do
+            [[ "${VMState}" == "${target}" ]] && return
+        done
+        sleep 2
     done
 }
 
-resume() {
-    {{- range $lab.Vms }}
-      {{- $vm := . }}
-      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
-    vboxmanage controlvm "{{ $vmName }}" resume &
-    {{- end }}
-    for pid in $(jobs -pr); do
-         wait $pid
+wait_vm_state_not() {
+    local name="$1"; shift
+    while true; do
+        eval $(vboxmanage showvminfo --machinereadable "${name}" | grep VMState)
+        for target in "$@"; do
+            [[ "${VMState}" != "${target}" ]] && return
+        done
+        sleep 2
     done
+}
+
+pause() {
+    {{- if eq (len $lab.Vms) 1 }}
+    vboxmanage controlvm "{{ $lab.Name }}-controller-0" pause
+    sleep 2
+    wait_vm_state "{{ $lab.Name }}-controller-0" paused poweroff aborted
+    {{- else }}
+    local node="$1"
+    if [ -n "${node}" ]; then
+        vboxmanage controlvm "{{ $lab.Name }}-${node}" pause
+        sleep 2
+        wait_vm_state "{{ $lab.Name }}-${node}" paused poweroff aborted
+        return
+    fi
+      {{- range $lab.Vms }}
+        {{- $vm := . }}
+        {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    vboxmanage controlvm "{{ $vmName }}" pause &
+        {{- end }}
+    sleep 2
+      {{- range $lab.Vms }}
+        {{- $vm := . }}
+        {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    wait_vm_state "{{ $vmName }}" paused poweroff aborted
+        {{- end }}
+    {{- end }}
+}
+
+resume() {
+    {{- if eq (len $lab.Vms) 1 }}
+    vboxmanage controlvm "{{ $lab.Name }}-controller-0" resume
+    sleep 2
+    wait_vm_state "{{ $lab.Name }}-controller-0" running
+    {{- else }}
+    local node="$1"
+    if [ -n "${node}" ]; then
+        vboxmanage controlvm "{{ $lab.Name }}-${node}" resume
+        sleep 2
+        wait_vm_state "{{ $lab.Name }}-${node}" running
+        return
+    fi
+      {{- range $lab.Vms }}
+        {{- $vm := . }}
+        {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    vboxmanage controlvm "{{ $vmName }}" resume &
+      {{- end }}
+    sleep 2
+      {{- range $lab.Vms }}
+        {{- $vm := . }}
+        {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    wait_vm_state "{{ $vmName }}" running
+        {{- end }}
+    {{- end }}
 }
 
 snapshot() {
     local name=$1
-    pause "$1"
+    pause "${name}"
     {{- range $lab.Vms }}
       {{- $vm := . }}
       {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     vboxmanage snapshot "{{ $vmName }}" take "${name}"
     {{- end }}
-    resume "$1"
+    resume "${name}"
 }
 
 restore() {
@@ -41,13 +95,19 @@ restore() {
     {{- range $lab.Vms }}
       {{- $vm := . }}
       {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
-    vboxmanage controlvm "{{ $vmName }}" poweroff
+    vboxmanage controlvm "{{ $vmName }}" poweroff &
+    {{- end }}
+    sleep 2
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    wait_vm_state "{{ $vmName }}" poweroff aborted
+    {{- end }}
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
     vboxmanage snapshot "{{ $vmName }}" restore "${name}"
-    while true; do
-        eval $(vboxmanage showvminfo --machinereadable "{{ $vmName }}" | grep VMState)
-        [[ "${VMState}" == "saved" ]] && break
-        sleep 5
-    done
+    wait_vm_state "{{ $vmName }}" saved
     {{- end }}
     {{- range $lab.Vms }}
       {{- $vm := . }}
@@ -58,23 +118,94 @@ restore() {
     {{- range $lab.Vms }}
       {{- $vm := . }}
       {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
-    while true; do
-        eval $(vboxmanage showvminfo --machinereadable "{{ $vmName }}" | grep VMState)
-        [[ "${VMState}" != "restoring" ]] && break
-        sleep 5
-    done
+    wait_vm_state_not "{{ $vmName }}" restoring
     {{- end }}
+    sleep 2
+    resume
 }
 
 start() {
-    local name="$1"
-    vboxmanage startvm "{{ $lab.Name }}-${name}" --type headless
+    {{- if eq (len $lab.Vms) 1 }}
+    nohup vboxmanage startvm "{{ $lab.Name }}-controller-0" --type headless >/dev/null 2>&1 &
+    sleep 2
+    wait_vm_state "{{ $lab.Name }}-controller-0" running
+    {{- else }}
+    local node="$1"
+    if [ -n "${node}" ]; then
+        nohup vboxmanage startvm "{{ $lab.Name }}-${node}" --type headless >/dev/null 2>&1 &
+        sleep 2
+        wait_vm_state "{{ $lab.Name }}-${node}" running
+        return
+    fi
+      {{- range $lab.Vms }}
+        {{- $vm := . }}
+        {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    nohup vboxheadless --start-paused --startvm "{{ $vmName }}" >/dev/null 2>&1 &
+      {{- end }}
+    sleep 2
+      {{- range $lab.Vms }}
+        {{- $vm := . }}
+        {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    wait_vm_state "{{ $vmName }}" paused running
+      {{- end }}
+    resume
+    {{- end }}
+}
+
+stop() {
+    {{- if eq (len $lab.Vms) 1 }}
+    vboxmanage controlvm "{{ $lab.Name }}-controller-0" poweroff
+    sleep 2
+    wait_vm_state "{{ $lab.Name }}-controller-0" poweroff aborted
+    {{- else }}
+    local node="$1"
+    if [ -n "${node}" ]; then
+        vboxmanage controlvm "{{ $lab.Name }}-${node}" poweroff
+        sleep 2
+        wait_vm_state "{{ $lab.Name }}-${node}" poweroff aborted
+        return
+    fi
+    pause
+      {{- range $lab.Vms }}
+        {{- $vm := . }}
+        {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    vboxmanage controlvm "{{ $vmName }}" poweroff &
+      {{- end }}
+    sleep 2
+      {{- range $lab.Vms }}
+        {{- $vm := . }}
+        {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    wait_vm_state "{{ $vmName }}" poweroff aborted
+      {{- end }}
+    {{- end }}
+}
+
+delete() {
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    vboxmanage controlvm "{{ $vmName }}" poweroff &
+    {{- end }}
+    sleep 2
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    wait_vm_state "{{ $vmName }}" poweroff aborted
+    {{- end }}
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+      {{- $vmName := printf "%s-%s" $lab.Name $vm.Name }}
+    vboxmanage unregistervm "{{ $vmName }}" --delete
+    {{- end }}
 }
 
 usage() {
     cat <<EOF >&2
-Usage: vmctl.sh [snapshot|restore] <snapshot-name>
-       vmctl.sh start <node-name>
+Usage: vmctl.sh snapshot <snapshot-name>
+       vmctl.sh restore <snapshot-name>
+       vmctl.sh start [node]
+       vmctl.sh stop [node]
+       vmctl.sh delete
 EOF
 }
 
@@ -82,11 +213,17 @@ case "$1" in
 start)
     start "$2"
     ;;
+stop)
+    stop "$2"
+    ;;
 snapshot)
     snapshot "$2"
     ;;
 restore)
     restore "$2"
+    ;;
+delete)
+    delete
     ;;
 *)
     usage
