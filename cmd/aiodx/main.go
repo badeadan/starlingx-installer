@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab/installers"
+	"github.com/gobuffalo/packr/v2"
 	"log"
 	"os"
 )
@@ -27,6 +28,12 @@ func main() {
 	flag.UintVar(&dx.DiskCount, "disk-count", _default.DiskCount, "number of extra controller disks")
 
 	flag.Parse()
+
+	// Force packr template discovery
+	_ = packr.New("VboxTemplates", "./templates/vbox")
+	_ = packr.New("LibvirtTemplates", "./templates/libvirt")
+	_ = packr.New("InstallTemplates", "./templates/install")
+
 	if dx.Hypervisor == "libvirt" {
 		dx.LoopBackPrefix = ""
 		err := installers.MakeAioDxLibvirtInstaller(dx, os.Stdout)

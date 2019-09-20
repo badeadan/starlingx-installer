@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab"
 	"github.com/badeadan/starlingx-vbox-installer/pkg/lab/installers"
+	"github.com/gobuffalo/packr/v2"
 	"log"
 	"os"
 )
@@ -37,6 +38,12 @@ func main() {
 	flag.UintVar(&sl.StorageDiskSize, "storage-disk", _default.StorageDiskSize, "storage disk size")
 
 	flag.Parse()
+
+	// Force packr template discovery
+	_ = packr.New("VboxTemplates", "./templates/vbox")
+	_ = packr.New("LibvirtTemplates", "./templates/libvirt")
+	_ = packr.New("InstallTemplates", "./templates/install")
+
 	if sl.Hypervisor == "libvirt" {
 		sl.LoopBackPrefix = ""
 		err := installers.MakeStorageLibvirtInstaller(sl, os.Stdout)
