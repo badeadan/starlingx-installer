@@ -2,6 +2,18 @@
   {{- $lab := . -}}
 #!/usr/bin/env bash
 
+wait_vm_state() {
+    local name="$1"; shift
+    local state
+    while true; do
+        state=$(virsh domstate "${name}" 2>/dev/null)
+        for target in "$@"; do
+            [[ "${state}" == "${target}" ]] && return
+        done
+        sleep 2
+    done
+}
+
 pause() {
     {{- range $lab.Vms }}
       {{- $vm := . }}
@@ -10,6 +22,10 @@ pause() {
     for pid in $(jobs -pr); do
          wait $pid
     done
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+    wait_vm_state "{{ $vm.Name }}" paused "shut off"
+    {{- end }}
 }
 
 resume() {
@@ -20,41 +36,130 @@ resume() {
     for pid in $(jobs -pr); do
          wait $pid
     done
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+    wait_vm_state "{{ $vm.Name }}" running "shut off"
+    {{- end }}
 }
 
 snapshot() {
     local name="$1"
-    pause "$1"
+    pause
     {{- range $lab.Vms }}
       {{- $vm := . }}
-    virsh snapshot-create-as "{{ $vm.Name }}" --name "${name}"
+    virsh snapshot-create-as "{{ $vm.Name }}" --name "${name}" &
     {{- end }}
-    resume "$1"
+    for pid in $(jobs -pr); do
+         wait $pid
+    done
+    resume
 }
 
 restore() {
     local name="$1"
+    local state
     pause
     {{- range $lab.Vms }}
       {{- $vm := . }}
-    virsh snapshot-revert "{{ $vm.Name }}" --snapshotname "${name}" --paused
+    state=$(virsh snapshot-info "{{ $vm.Name }}" --snapshotname "${name}" | awk '$1=="State:"{print $2}')
+    if [[ "${state}" == "running" ]]; then
+        virsh snapshot-revert "{{ $vm.Name }}" --snapshotname "${name}" --paused --force &
+    else
+        virsh snapshot-revert "{{ $vm.Name }}" --snapshotname "${name}" --force &
+    fi
     {{- end }}
-    sleep 3
+    for pid in $(jobs -pr); do
+         wait $pid
+    done
+    {{- range $lab.Vms }}
+      {{- $vm := . }}
+    wait_vm_state "{{ $vm.Name }}" paused "shut off"
+    {{- end }}
     resume
 }
 
 start() {
-    local name="$1"
-    {{- range $net := $lab.Networks }}
+    {{- if eq (len $lab.Vms) 1 }}
+      {{- range $net := $lab.Networks }}
     virsh net-start "{{ $net.Name }}" >/dev/null 2>&1
+      {{- end }}
+    virsh start "{{ $lab.Name }}-controller-0"
+    wait_vm_state "{{ $lab.Name }}-controller-0" running 
+    {{- else }}
+    local node="$1"
+      {{- range $net := $lab.Networks }}
+    virsh net-start "{{ $net.Name }}" >/dev/null 2>&1
+      {{- end }}
+    if [ -n "${node}" ]; then
+        virsh start "{{ $lab.Name }}-${node}"
+        wait_vm_state "{{ $lab.Name }}-${node}" running 
+        return
+    fi
+      {{- range $vm := $lab.Vms }}
+    virsh start "{{ $vm.Name }}" &
+      {{- end }}
+    for pid in $(jobs -pr); do
+         wait $pid
+    done
+      {{- range $vm := $lab.Vms }}
+    wait_vm_state "{{ $vm.Name }}" running
+      {{- end }}
     {{- end }}
-    virsh start "{{ $lab.Name }}-${name}"
+}
+
+stop() {
+    {{- if eq (len $lab.Vms) 1 }}
+    virsh destroy "{{ $lab.Name }}-controller-0"
+    wait_vm_state "{{ $lab.Name }}-controller-0" "shut off"
+    {{- else }}
+    local node="$1"
+    if [ -n "${node}" ]; then
+        virsh destroy "{{ $lab.Name }}-${node}"
+        wait_vm_state "{{ $lab.Name }}-${node}" "shut off"
+        return
+    fi
+      {{- range $vm := $lab.Vms }}
+    virsh destroy "{{ $vm.Name }}" &
+      {{- end }}
+    for pid in $(jobs -pr); do
+         wait $pid
+    done
+      {{- range $vm := $lab.Vms }}
+    wait_vm_state "{{ $vm.Name }}" "shut off"
+      {{- end }}
+    {{- end }}
+}
+
+delete() {
+    local uuid
+    stop
+    {{- range $vm := $lab.Vms }}
+    virsh undefine "{{ $vm.Name }}" --remove-all-storage --delete-snapshots --snapshots-metadata
+    while true; do
+        uuid=$(virsh domuuid "{{ $vm.Name }}" 2>/dev/null)
+        [[ -z "${uuid}" ]] && break
+        sleep 2
+    done
+    rm -f {{ $vm.Name }}-disk*.img
+    {{- end }}
+    {{- range $net := $lab.Networks }}
+    virsh net-undefine "{{ $net.Name }}"
+    virsh net-destroy "{{ $net.Name }}"
+    while true; do
+        uuid=$(virsh net-uuid "{{ $net.Name }}" 2>/dev/null)
+        [[ -z "${uuid}" ]] && break
+        sleep 2
+    done
+    {{- end }}
 }
 
 usage() {
     cat <<EOF >&2
-Usage: vmctl.sh [snapshot|restore] <snapshot-name>
-       vmctl.sh start <node-name>
+Usage: vmctl.sh snapshot <snapshot-name>
+       vmctl.sh restore <snapshot-name>
+       vmctl.sh start [node]
+       vmctl.sh stop [node]
+       vmctl.sh delete
 EOF
 }
 
@@ -62,11 +167,17 @@ case "$1" in
 start)
     start "$2"
     ;;
+stop)
+    stop "$2"
+    ;;
 snapshot)
     snapshot "$2"
     ;;
 restore)
     restore "$2"
+    ;;
+delete)
+    delete
     ;;
 *)
     usage
