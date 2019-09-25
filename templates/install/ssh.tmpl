@@ -35,8 +35,7 @@ Host controller-0-*
   GlobalKnownHostsFile /dev/null
   ProxyCommand ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o GlobalKnownHostsFile=/dev/null sysadmin@{{ $host0 }} -p {{ $port }} -W $(H=%h; echo ${H/controller-0-/}):22
 
-{{- if ne $lab.SystemMode "simplex" -}}
-
+{{- if ne $lab.SystemMode "simplex" }}
 Host controller-1
   User sysadmin
   StrictHostKeyChecking no
