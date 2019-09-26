@@ -32,7 +32,7 @@ echo "# run ansible playbook"
 ssh -F ./ssh.config controller-0 \
     bash <<'EOF' || die
 source /etc/profile
-ansible-playbook /usr/share/ansible/stx-ansible/playbooks/bootstrap/bootstrap.yml \
+ansible-playbook /usr/share/ansible/stx-ansible/playbooks/bootstrap.yml \
                  -e "override_files_dir=/home/sysadmin"
 EOF
 
