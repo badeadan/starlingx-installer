@@ -1,0 +1,220 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<project>
+    <actions/>
+    <description></description>
+    <keepDependencies>false</keepDependencies>
+    <properties>
+        <com.sonyericsson.rebuild.RebuildSettings plugin="rebuild@1.25">
+            <autoRebuild>false</autoRebuild>
+            <rebuildDisabled>false</rebuildDisabled>
+        </com.sonyericsson.rebuild.RebuildSettings>
+        <hudson.model.ParametersDefinitionProperty>
+            <parameterDefinitions>
+                <hudson.model.ChoiceParameterDefinition>
+                    <name>SETUP_TYPE</name>
+                    <description></description>
+                    <choices class="java.util.Arrays$ArrayList">
+                        <a class="string-array">
+                            <string>aiosx</string>
+                            <string>aiodx</string>
+                            <string>standard</string>
+                            <string>storage</string>
+                        </a>
+                    </choices>
+                </hudson.model.ChoiceParameterDefinition>
+                <hudson.model.StringParameterDefinition>
+                    <name>HYPERVISOR_HOST</name>
+                    <description></description>
+                    <defaultValue>virt-host.domain</defaultValue>
+                    <trim>false</trim>
+                </hudson.model.StringParameterDefinition>
+                <hudson.model.StringParameterDefinition>
+                    <name>HYPERVISOR_USER</name>
+                    <description></description>
+                    <defaultValue>user</defaultValue>
+                    <trim>false</trim>
+                </hudson.model.StringParameterDefinition>
+                <hudson.model.StringParameterDefinition>
+                    <name>HYPERVISOR_INSTALL_BASE</name>
+                    <description></description>
+                    <defaultValue>~/jenkins-starlingx</defaultValue>
+                    <trim>false</trim>
+                </hudson.model.StringParameterDefinition>
+                <hudson.model.ChoiceParameterDefinition>
+                    <name>HYPERVISOR_TYPE</name>
+                    <description></description>
+                    <choices class="java.util.Arrays$ArrayList">
+                        <a class="string-array">
+                            <string>virtualbox</string>
+                            <string>libvirt</string>
+                        </a>
+                    </choices>
+                </hudson.model.ChoiceParameterDefinition>
+                <hudson.model.StringParameterDefinition>
+                    <name>BOOTIMAGE_ISO</name>
+                    <description>URL or path on hypervisor host.</description>
+                    <defaultValue>http://mirror.starlingx.cengn.ca/mirror/starlingx/master/centos/latest_green_build/outputs/iso/bootimage.iso</defaultValue>
+                    <trim>false</trim>
+                </hudson.model.StringParameterDefinition>
+                <hudson.model.StringParameterDefinition>
+                    <name>INSTALLER_URL</name>
+                    <description></description>
+                    <defaultValue>https://github.com/badeadan/starlingx-installer/releases/download/1.4/starlingx-installer.zip</defaultValue>
+                    <trim>false</trim>
+                </hudson.model.StringParameterDefinition>
+                <hudson.model.StringParameterDefinition>
+                    <name>INSTALLER_OPTIONS</name>
+                    <description></description>
+                    <defaultValue></defaultValue>
+                    <trim>false</trim>
+                </hudson.model.StringParameterDefinition>
+                <hudson.model.BooleanParameterDefinition>
+                    <name>WIPE_EXISTING_INSTALL</name>
+                    <description></description>
+                    <defaultValue>true</defaultValue>
+                </hudson.model.BooleanParameterDefinition>
+                <hudson.model.BooleanParameterDefinition>
+                    <name>REMOVE_AFTER_INSTALL</name>
+                    <description></description>
+                    <defaultValue>true</defaultValue>
+                </hudson.model.BooleanParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>POST_INSTALL_SCRIPT</name>
+                    <description></description>
+                    <defaultValue>ssh -F ssh.config controller-0 bash &lt;&lt;&apos;EOF&apos;
+                        source /etc/platform/openrc
+                        system host-list
+                        system application-list
+                        ceph -s
+                        EOF</defaultValue>
+                    <trim>false</trim>
+                </hudson.model.TextParameterDefinition>
+            </parameterDefinitions>
+        </hudson.model.ParametersDefinitionProperty>
+        <EnvInjectJobProperty plugin="envinject@2.1">
+            <info>
+                <secureGroovyScript plugin="script-security@1.59">
+                    <script></script>
+                    <sandbox>false</sandbox>
+                </secureGroovyScript>
+                <loadFilesFromMaster>false</loadFilesFromMaster>
+            </info>
+            <on>true</on>
+            <keepJenkinsSystemVariables>true</keepJenkinsSystemVariables>
+            <keepBuildVariables>true</keepBuildVariables>
+            <overrideBuildParameters>false</overrideBuildParameters>
+        </EnvInjectJobProperty>
+    </properties>
+    <scm class="hudson.scm.NullSCM"/>
+    <canRoam>true</canRoam>
+    <disabled>false</disabled>
+    <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+    <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+    <triggers/>
+    <concurrentBuild>true</concurrentBuild>
+    <builders>
+        <hudson.tasks.Shell>
+            <command>#!/bin/bash
+
+            SESSION=${BUILD_TAG}
+
+            cat &gt;ssh.config &lt;&lt;EOF
+            Host remote
+            User $HYPERVISOR_USER
+            Hostname $HYPERVISOR_HOST
+            Port 22
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            GlobalKnownHostsFile /dev/null
+            EOF
+
+            cat ssh.config
+            set -xe
+
+            # Setup remote folders
+            ssh -F ssh.config remote \
+            mkdir -p &quot;${HYPERVISOR_INSTALL_BASE}/${SESSION}&quot;
+            INSTALL_ROOT=$(\
+            ssh -F ssh.config remote \
+            readlink -f &quot;${HYPERVISOR_INSTALL_BASE}/${SESSION}&quot;)
+
+            # Setup install environment
+            { echo WORKSPACE=&quot;${INSTALL_ROOT}&quot;
+            echo SETUP_TYPE=&quot;${SETUP_TYPE}&quot;
+            echo HYPERVISOR_TYPE=&quot;${HYPERVISOR_TYPE}&quot;
+            echo BOOTIMAGE_ISO=&quot;${BOOTIMAGE_ISO}&quot;
+            echo INSTALLER_URL=&quot;${INSTALLER_URL}&quot;
+            echo INSTALLER_OPTIONS=&quot;${INSTALLER_OPTIONS}&quot;
+            echo WIPE_EXISTING_INSTALL=&quot;${WIPE_EXISTING_INSTALL}&quot;
+            echo REMOVE_AFTER_INSTALL=&quot;${REMOVE_AFTER_INSTALL}&quot;
+            } | ssh -F ssh.config remote \
+            bash -c &quot;cat &gt; ${INSTALL_ROOT}/jenkins-env.sh&quot; \
+
+            # Copy setup scripts
+            ssh -F ssh.config remote \
+            bash -c &quot;cat &gt; ${INSTALL_ROOT}/post-install.sh&quot; \
+            &lt;&lt;&lt;&quot;${POST_INSTALL_SCRIPT}&quot;
+
+            # Upload install script
+            ssh -F ssh.config remote \
+            bash -c &quot;cat &gt; ${INSTALL_ROOT}/run-jenkins.sh&quot; &lt;&lt;&apos;EOF&apos;
+
+            source &quot;$1&quot;
+            set -xe
+
+            mkdir -p &quot;${WORKSPACE}&quot;
+            cd &quot;${WORKSPACE}&quot;
+            wget --no-verbose \
+	          -O starlingx-installer.zip \
+            &quot;${INSTALLER_URL}&quot;
+            unzip -o starlingx-installer.zip
+
+            if [[ ! -f &quot;${BOOTIMAGE_ISO}&quot; ]]; then
+            wget --no-verbose \
+            -O &quot;${WORKSPACE}/bootimage.iso&quot; \
+            &quot;${BOOTIMAGE_ISO}&quot;
+            BOOTIMAGE_ISO=&quot;${WORKSPACE}/bootimage.iso&quot;
+            fi
+            
+            mkdir -p &quot;${SETUP_TYPE}&quot;
+            cd &quot;${SETUP_TYPE}&quot;
+            if [[ &quot;${WIPE_EXISTING_INSTALL}&quot; == &quot;true&quot; ]] &amp;&amp; [[ -f ./vmctl.sh ]]; then
+            timeout 120 ./vmctl.sh delete
+            fi
+
+            ${WORKSPACE}/starlingx-installer/${SETUP_TYPE} \
+            --hypervisor &quot;${HYPERVISOR_TYPE}&quot; \
+            ${INSTALLER_OPTIONS} \
+            | tar -x -C ..
+
+            ./setup.sh &quot;${BOOTIMAGE_ISO}&quot;
+            if [[ &quot;${HYPERVISOR_TYPE}&quot; == &quot;libvirt&quot; ]]; then
+            chmod -R a+rwX .
+            fi
+            ./install.sh
+
+            bash &quot;${WORKSPACE}/post-install.sh&quot;
+
+            if [[ &quot;${REMOVE_AFTER_INSTALL}&quot; == &quot;true&quot; ]]; then
+            timeout 120 \
+            ./vmctl.sh delete
+            cd ~
+            if [[ -f &quot;${WORKSPACE}/run-jenkins.sh&quot; ]]; then
+            rm -rf &quot;${WORKSPACE}&quot;
+            fi
+            fi
+
+            EOF
+
+            # Run install script
+            ssh -F ssh.config -t remote \
+            bash -l \
+            &quot;${INSTALL_ROOT}/run-jenkins.sh&quot; \
+            &quot;${INSTALL_ROOT}/jenkins-env.sh&quot;
+            
+</command>
+        </hudson.tasks.Shell>
+    </builders>
+    <publishers/>
+    <buildWrappers/>
+</project>
